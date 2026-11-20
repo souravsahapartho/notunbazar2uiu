@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>টেসলা মামা: সিট ধরে রাখো! | নতুন বাজার → UIU</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="wrap">
+  <div id="stage">
+    <canvas id="game"></canvas>
+
+    <div id="menu" class="overlay">
+      <div class="card">
+        <h1>🛺 টেসলা মামা</h1>
+        <h2>সিট ধরে রাখো!</h2>
+        <p class="route">নতুন বাজার → ফ্যামিলি বাজার → সাহেবনগর → দশতলা → ভিটামিন গেট → ইউ-টার্ন → মসজিদ আল মুস্তাফা → <b>UIU</b></p>
+        <label class="name">তোমার নাম
+          <input id="nameInput" maxlength="24" placeholder="যেমন: সৌরভ" autocomplete="off">
+        </label>
+        <ul class="how">
+          <li><b>SPACE</b> চেপে ধরো = সিট শক্ত করে ধরো (স্ট্যামিনা খরচ হয়)</li>
+          <li><b>← →</b> (বা A / D) = কাত হয়ে ব্যালান্স করো</li>
+          <li><b>↓</b> (বা S) = “মামা, ধীরে!” — গাড়ির সাথে গুঁতা এড়াও</li>
+          <li><b>M</b> = মিউট</li>
+        </ul>
+        <label class="chk"><input type="checkbox" id="voiceChk" checked> বাংলা ভয়েস (ব্রাউজার TTS)</label>
+        <div id="voiceNote" class="note"></div>
+        <button id="startBtn" class="big">রওনা দাও!</button>
+        <div class="note" id="bestNote"></div>
+      </div>
+    </div>
+
+    <div id="end" class="overlay hidden">
+      <div class="card end">
+        <h2 id="endTitle"></h2>
+        <div id="endBody"></div>
+        <div class="row">
+          <button id="retryBtn" class="big">আবার চেষ্টা</button>
+          <button id="menuBtn">মেনু</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="touch">
+    <button id="bL" aria-label="left">◀</button>
+    <button id="bR" aria-label="right">▶</button>
+    <button id="bS">ধীরে মামা</button>
+    <button id="bG">সিট ধরো</button>
+  </div>
+</div>
+<script src="js/lines.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>
