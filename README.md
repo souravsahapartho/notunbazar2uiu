@@ -105,3 +105,10 @@ The game plays a clip when it exists and falls back to browser TTS otherwise. Us
 - Dramatic death: at low life he screams "বাঁচাও বাঁচাও… এখনো বিয়া করি নাই", the passenger is thrown off and the auto tips over, then the notices appear.
 - Touch: pointer capture on the pad (no stuck buttons), haptics, safe-area insets, no zoom/long-press, PWA manifest + icon (Add to Home Screen on iPhone gives fullscreen).
 - Tested on 10 viewports (Pixel 7, iPhone 14/SE, iPad, desktop; portrait and landscape) with Chrome emulation. Real iOS Safari is untested.
+
+## Controls (pick in the menu)
+- 🎮 **Manual** – ◀ ▶ lean, ✋ grip, 🐢 slow (or arrow keys / Space / S).
+- 📱 **Phone tilt** – roll the phone left/right to lean; tip the top edge toward you to grip, push it away to slow down. Calibrates at ride start. iOS asks for motion permission. Tick "↔ উল্টো" if the direction feels reversed on your phone (sensor axes differ by device; untested on real hardware).
+- 🤖 **Auto balance** – the game keeps balance; you only grip/slow down. Easiest.
+
+Physics was also made more forgiving (slower stamina drain, smaller fall/hit penalties, self-righting).

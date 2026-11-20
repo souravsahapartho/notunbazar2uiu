@@ -203,6 +203,31 @@ function speak(text, key, force, cb) {
 /* ---------- state ---------- */
 let S = null;
 const inp = { grip: false, left: false, right: false, slow: false };
+// control modes: manual (buttons/keys), tilt (phone sensors), auto (game balances for you; you only grip/brake)
+const CTRL = { mode: 'manual', invert: false, lean: 0, pitch: 0, base: null, live: false, ok: false };
+function screenAngle() { return (screen.orientation && typeof screen.orientation.angle === 'number') ? screen.orientation.angle : (typeof window.orientation === 'number' ? window.orientation : 0); }
+function onTilt(e) {
+  if (e.beta == null && e.gamma == null) return;
+  const a = screenAngle(), b = e.beta || 0, g = e.gamma || 0;
+  let side, fwd; // side = roll about screen's vertical axis, fwd = tip top edge toward you
+  if (a === 90) { side = -b; fwd = g; } else if (a === 270 || a === -90) { side = b; fwd = -g; } else if (a === 180) { side = -g; fwd = -b; } else { side = g; fwd = b; }
+  if (!CTRL.base) CTRL.base = { side, fwd };
+  CTRL.ok = true;
+  CTRL.lean = clamp((side - CTRL.base.side) / 18, -1, 1) * (CTRL.invert ? -1 : 1);
+  CTRL.pitch = clamp((fwd - CTRL.base.fwd) / 18, -1, 1);
+}
+function calibrateTilt() { CTRL.base = null; }
+function enableTilt() {
+  if (CTRL.live || typeof window.addEventListener !== 'function') return;
+  const go = () => { window.addEventListener('deviceorientation', onTilt); CTRL.live = true; };
+  const DO = window.DeviceOrientationEvent;
+  if (DO && typeof DO.requestPermission === 'function') DO.requestPermission().then(r => { if (r === 'granted') go(); }).catch(() => {});
+  else if (DO) go();
+}
+function ctrlLean() { // -1..1
+  const kb = (inp.right ? 1 : 0) - (inp.left ? 1 : 0);
+  return CTRL.mode === 'tilt' && CTRL.ok ? clamp(kb + CTRL.lean, -1, 1) : kb;
+}
 const VT = {
   car: { len: 4.4, v: [6, 9] },
   bus: { len: 9, v: [5, 7.5] },
@@ -233,7 +258,7 @@ function say(who, text, opts) {
 function later(t, fn) { S.pend.push({ t, fn }); }
 function jolt(mag, sign) {
   sign = sign || (Math.random() < .5 ? -1 : 1);
-  S.va += sign * mag * .72 * (S.gripping ? .32 : 1);
+  S.va += sign * mag * .55 * (S.gripping ? .32 : 1);
   S.bobV -= 60 * Math.min(1.5, mag);
   S.shake = Math.max(S.shake, Math.min(8, mag * 3));
 }
@@ -266,10 +291,14 @@ function startGame() { // menu -> haggle screen
   store.set('tm_name', FARE.name);
   settings.voice = $('voiceChk').checked; settings.subs = $('subsChk').checked; subsTouched = true; settings.abuse = $('abuseChk').checked;
   FARE.weather = $('weatherSel').value;
+  CTRL.invert = $('invChk').checked; store.set('tm_inv', CTRL.invert ? '1' : '0');
+  if (CTRL.mode === 'tilt') enableTilt();
+  calibrateTilt();
   goFullscreen();
   if (!store.get('tm_tut')) showTutorial(openFare); else openFare();
 }
 function beginRide() { // haggle done -> ride
+  calibrateTilt(); document.body.classList.toggle('tiltmode', CTRL.mode === 'tilt');
   const deal = FARE.deal; if (!deal) return;
   audioInit();
   S = newState(); S.mode = 'play'; S.name = FARE.name; S.deal = deal; S.rain = deal.rain; S.mood = deal.mood;
@@ -337,7 +366,8 @@ function update(dt) {
 
   // speed
   const cruise = 11.5 + 4.5 * prog + (S.mood === 'angry' ? 2.5 : S.mood === 'happy' ? -1.5 : 0);
-  let target = inp.slow ? 5.5 : cruise;
+  const slowOn = inp.slow || (CTRL.mode === 'tilt' && CTRL.ok && CTRL.pitch < -.55);
+  let target = slowOn ? 5.5 : cruise;
   if (S.uturn.state === 1) target = 6;
   if (S.recover > 0) target = Math.min(target, 7);
   if (S.stopT > 0) target = 0;
@@ -372,31 +402,33 @@ function update(dt) {
   }
 
   // grip & stamina
-  if (inp.grip && !S.gripLocked && S.stamina > 0) {
+  const gripOn = (inp.grip || (CTRL.mode === 'tilt' && CTRL.ok && CTRL.pitch > .55) || (CTRL.mode === 'auto' && Math.abs(S.a) > .55));
+  if (gripOn && !S.gripLocked && S.stamina > 0) {
     if (!S.gripping) sfx.grip();
-    S.gripping = true; S.stamina -= 20 * dt;
+    S.gripping = true; S.stamina -= 13 * dt;
     if (S.stamina <= 0) { S.stamina = 0; S.gripLocked = true; S.gripping = false; say('player', 'হাত অবশ হয়ে গেল!', { life: 1.6 }); }
   } else {
     S.gripping = false;
-    S.stamina = Math.min(100, S.stamina + (inp.grip ? 4 : 14) * dt);
+    S.stamina = Math.min(100, S.stamina + (gripOn ? 6 : 18) * dt);
     if (S.gripLocked && S.stamina >= 30) S.gripLocked = false;
   }
 
   // balance physics
-  const lean = (inp.right ? 1 : 0) - (inp.left ? 1 : 0);
+  const lean = ctrlLean();
   const rough = STAGES[S.stageIdx].rough * (S.rain ? 1.12 : 1);
-  let ac = .9 * S.a + lean * (S.gripping ? 2.4 : 4.4);
-  ac += (Math.random() - .5) * .5 * rough * (S.speed / 15) * 4;
+  let ac = .15 * S.a + lean * (S.gripping ? 3 : 5.4);
+  ac += (Math.random() - .5) * .3 * rough * (S.speed / 15) * 4;
+  if (CTRL.mode === 'auto') ac -= S.a * 4.2 + S.va * .8;
   if (S.gripping) ac -= S.a * 5;
   if (u.state === 1) ac += u.sign * 3.8 * Math.sin(Math.PI * clamp(u.t / UTURN_DUR, 0, 1));
   S.va += ac * dt;
-  S.va *= Math.exp(-(S.gripping ? 7 : 2.2) * dt);
+  S.va *= Math.exp(-(S.gripping ? 7 : 3.2) * dt);
   S.a += S.va * dt;
-  if (Math.abs(S.a) > .8 && S.nearT <= 0 && S.recover <= 0) {
+  if (Math.abs(S.a) > .9 && S.nearT <= 0 && S.recover <= 0) {
     S.nearT = 3; say('player', pick(L.nearFall), { speak: true, life: 1.8 });
   }
-  if (Math.abs(S.a) >= 1 && S.recover <= 0) {
-    S.falls++; S.life -= 16; S.a = 0; S.va = 0; S.recover = 1.6; S.score -= 40;
+  if (Math.abs(S.a) >= 1.15 && S.recover <= 0) {
+    S.falls++; S.life -= 11; S.a = 0; S.va = 0; S.recover = 1.6; S.score -= 40;
     S.shake = 10; S.flash = .7; S.flashCol = '#ef4444'; sfx.thud();
     say('player', pick(L.fall), { speak: true, force: true });
     if (S.life <= 0) { S.life = 0; die('fall'); return; }
@@ -486,7 +518,7 @@ function spawnPed(x) {
   S.peds.push({ x, lat: 0, go: false, hit: false, fall: 0, shirt: pick(['#2563eb', '#f59e0b', '#16a34a', '#e11d48', '#0ea5e9', '#a855f7']), skin: pick(['#c68a5a', '#a86f45', '#d8a276']), bag: Math.random() < .5 ? '#2563eb' : null, umb: pick(['#f43f5e', '#0ea5e9', '#a855f7', '#16a34a']) });
 }
 function hitPed(p) {
-  p.hit = true; p.fall = 0; S.hits++; S.life -= 8; S.score -= 100; S.speed = Math.min(S.speed, 8);
+  p.hit = true; p.fall = 0; S.hits++; S.life -= 6; S.score -= 100; S.speed = Math.min(S.speed, 8);
   jolt(1.8); sfx.thud(); S.flash = .5; S.flashCol = '#f59e0b';
   say('ped', pick(settings.abuse && Math.random() < .5 ? L.abuse : L.pedHit), { ref: p, force: true, life: 2.4 });
   if (!S.mob) {
@@ -560,7 +592,7 @@ function honk() {
 }
 function collide(v) {
   v.hit = true; v.leaving = true; v.v = Math.max(v.v, 9);
-  S.hits++; S.life -= 7; S.score -= 50;
+  S.hits++; S.life -= 5; S.score -= 50;
   S.speed = Math.min(S.speed, 4);
   jolt(2.3); S.shake = 10; S.flash = .5; S.flashCol = '#f59e0b'; sfx.thud();
   say('other', pick(settings.abuse && Math.random() < .6 ? L.abuse : L.carYell), { ref: v, speak: true, force: true, life: 2.6 });
@@ -1435,6 +1467,12 @@ $('voiceChk').addEventListener('change', e => { settings.voice = e.target.checke
 /* ---------- boot ---------- */
 S = newState();
 const savedName = store.get('tm_name'); if (savedName) $('nameInput').value = savedName;
+CTRL.mode = ['manual', 'tilt', 'auto'].includes(store.get('tm_ctrl')) ? store.get('tm_ctrl') : 'manual';
+$('invChk').checked = store.get('tm_inv') === '1';
+Array.from($('ctrlBtns').children).forEach(c => c.classList.toggle('on', c.dataset.c === CTRL.mode));
+$('ctrlBtns').addEventListener('click', e => { const t = e.target; if (!t || !t.dataset || !t.dataset.c) return; CTRL.mode = t.dataset.c; store.set('tm_ctrl', CTRL.mode); Array.from($('ctrlBtns').children).forEach(c => c.classList.toggle('on', c === t)); if (CTRL.mode === 'tilt') enableTilt(); $('ctrlNote').textContent = CTRL_NOTE[CTRL.mode]; });
+const CTRL_NOTE = { manual: 'বাটন বা কিবোর্ড: ◀ ▶ হেলাও, ✋ ধরো, 🐢 ধীরে।', tilt: 'ফোন ডানে-বামে কাত করলে অটো হেলবে। ফোনের উপরের দিক নিজের দিকে টানলে হাত ধরবে, দূরে ঠেললে ধীরে চলবে। উল্টো মনে হলে "উল্টো" টিক দাও।', auto: 'গেম নিজেই ব্যালান্স রাখবে। শুধু দরকারে ✋ আর 🐢 চাপো — সবচেয়ে সহজ।' };
+$('ctrlNote').textContent = CTRL_NOTE[CTRL.mode];
 FARE.gender = store.get('tm_gender') === 'f' ? 'f' : 'm';
 Array.from($('genBtns').children).forEach(c => c.classList.toggle('on', c.dataset && c.dataset.g === FARE.gender));
 const best = store.get('tm_best'); $('bestNote').textContent = best ? 'সর্বোচ্চ স্কোর: ' + best : '';
@@ -1442,5 +1480,5 @@ requestAnimationFrame(frame);
 
 layout();
 // exposed for headless tests only
-window.__tm = { get S() { return S; }, update, render, startGame, beginRide, openFare, inp, FARE, BOARDINGS, newDriver, respond, finishDeal, resize, layout, updateWorld, hitPed, startWrong, AMB, NAMED, standTick, plead, onOffer, onNextAuto, onSkip, SLOTS };
+window.__tm = { CTRL, onTilt, get S() { return S; }, update, render, startGame, beginRide, openFare, inp, FARE, BOARDINGS, newDriver, respond, finishDeal, resize, layout, updateWorld, hitPed, startWrong, AMB, NAMED, standTick, plead, onOffer, onNextAuto, onSkip, SLOTS };
 })();
