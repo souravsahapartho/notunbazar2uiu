@@ -89,3 +89,19 @@ Shop names and positions live in the `NAMED` list in `js/game.js`; they are styl
 - **Phones:** a "rotate your phone" screen appears in portrait (can be skipped).
 - **Easier:** smaller jolts/damage, fewer road-crossers and wrong-side overtakes.
 - **On death:** two notices at UIU — শোকবার্তা and দোয়া প্রার্থনা (fictional, game satire).
+
+## Realistic voices (voice pack)
+
+Browser TTS cannot be trained, so every voice sounds alike. The game can instead play pre-rendered clips:
+
+1. `node tools/dump_lines.js > tools/lines_dump.json` lists every spoken line with its voice key (driver, player_m, player_f, rick, car, bus, cng, crowd, ped).
+2. Put your own voice ids in `tools/voices.json` (ElevenLabs Bengali, or Azure bn-BD/bn-IN neural voices).
+3. `ELEVENLABS_API_KEY=... python3 tools/gen_voices.py` (or `AZURE_SPEECH_KEY=...`) writes `audio/*.mp3` and `audio/manifest.json`. Commit them.
+
+The game plays a clip when it exists and falls back to browser TTS otherwise. Use only licensed or consented voices.
+
+## What else is new
+- 🤬 Street abuse lines (menu toggle, on by default) for collisions, rude refusals and mobs.
+- Dramatic death: at low life he screams "বাঁচাও বাঁচাও… এখনো বিয়া করি নাই", the passenger is thrown off and the auto tips over, then the notices appear.
+- Touch: pointer capture on the pad (no stuck buttons), haptics, safe-area insets, no zoom/long-press, PWA manifest + icon (Add to Home Screen on iPhone gives fullscreen).
+- Tested on 10 viewports (Pixel 7, iPhone 14/SE, iPad, desktop; portrait and landscape) with Chrome emulation. Real iOS Safari is untested.

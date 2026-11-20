@@ -140,3 +140,7 @@ button,.chk{-webkit-user-select:none;user-select:none}
 }
 .stickyRow{position:sticky;bottom:0;padding:8px 0;background:linear-gradient(0deg,rgba(30,27,75,.97) 70%,transparent);z-index:3}
 #fare,#menu,#tut,#rot{padding-left:max(0px,env(safe-area-inset-left));padding-right:max(0px,env(safe-area-inset-right))}
+@media (orientation:portrait){
+  #fare .row button,#fare .offer button{min-height:46px;font-size:14px;padding:8px 12px}
+  #fare .row{gap:8px}
+}
