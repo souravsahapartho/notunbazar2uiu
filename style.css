@@ -151,3 +151,15 @@ body.c-auto #touch .lr{display:none}
 body.c-auto #touch{justify-content:center}
 body.c-auto #touch .ac{max-width:520px;margin:0 auto}
 #ctrlBtns button small{display:block;font-size:10px;font-weight:600;opacity:.8}
+
+/* end card: always fits, scrolls if needed, buttons stay reachable */
+.card.end{max-height:calc(100% - 12px);overflow:auto;-webkit-overflow-scrolling:touch}
+.card.end .row{position:sticky;bottom:0;padding-top:6px;background:linear-gradient(0deg,rgba(254,243,199,1) 70%,rgba(254,243,199,0))}
+@media (orientation:landscape) and (max-height:520px){
+  #end{align-items:center}
+  .card.end{width:min(36%,320px);padding:8px 10px;font-size:12px}
+  .card.end h2{font-size:clamp(15px,4.6vh,22px);margin:2px 0}
+  #endBody{font-size:11px;line-height:1.25}
+  #endBody td{padding:1px 5px}
+  .card.end button{min-height:38px;padding:6px 12px}
+}

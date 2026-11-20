@@ -116,3 +116,11 @@ In Tilt mode the on-screen ◀ ▶ pad is hidden (it returns automatically if no
 Physics was also made more forgiving (slower stamina drain, smaller fall/hit penalties, self-righting).
 
 - Fixed signs: BITUMEN GATE, CHEF'S TABLE (শেফস টেবিল). "বিয়া করি নাই" is now only cried on hard crashes/death; haggling uses a plain student plea. New 🔥 calm-ride combo (x1–x5). Lean input is eased for smoother control.
+
+## Landmarks & shops (this update)
+- Every shop now has its own name (হাজি / নয়ন / মা বিরিয়ানি, আলকারিম রেস্টুরেন্ট, আরোগ্য ফার্মেসি … from per-type pools); বিকাশ + নগদ boards sit together on telecom shops.
+- স্বপ্ন (Shwapno) outlet with restaurants between Natun Bazar and Family Bazar.
+- Bitumen Gate now has the big tree-lined boulevard branching off; "BITUMEN GATE" sign fixed.
+- Chef's Table is a big food court (United City, Madani Avenue style) with stall boards, umbrellas and fairy lights; it shows up as the camera swings round at the U-turn.
+- Masjid Al Mustafa: dark Kaaba-toned hall, golden dome, green minor domes, slim minarets; the road to UIU turns off to the left at the mosque junction. UIU gets a campus gate.
+- Tilt/Manual/Auto: an on-screen arrow now shows which way to lean back; first two tilt rides get short coaching banners. End card fits short landscape phones.

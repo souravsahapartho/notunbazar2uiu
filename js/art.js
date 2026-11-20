@@ -161,6 +161,8 @@ window.ART = function (E) {
     txt(label, cx, ty + 19, size || 15, fg, 'center', 700);
   }
   function shop(cx, B, kind, i, name) {
+    if (kind === 'shwapno') return shwapno(cx, B);
+    if (!name && kind !== 'chajoy' && kind !== 'hospital') name = poolName(kind, i);
     const w = 130 + hash(i * 1.9) * 50, h = 96 + hash(i * 2.7) * 56;
     const t = E.time();
     switch (kind) {
@@ -168,6 +170,7 @@ window.ART = function (E) {
         shopBody(cx, B, w, h, '#f1f5f9'); awning(cx, B, w, '#e11d74', '#fff', 62);
         sign(cx, B - h + 4, w - 14, name || 'মা টেলিকম', '#e11d74', '#fff', 14);
         txt('ক্যাশ ইন • ক্যাশ আউট', cx, B - h + 44, 11, '#9d174d', 'center', 700);
+        ctx.fillStyle = '#e11d74'; rr(cx - w / 2 + 6, B - 92, 44, 18, 3); ctx.fill(); txt('বিকাশ', cx - w / 2 + 28, B - 79, 11, '#fff', 'center', 700); ctx.fillStyle = '#f97316'; rr(cx - w / 2 + 54, B - 92, 44, 18, 3); ctx.fill(); txt('নগদ', cx - w / 2 + 76, B - 79, 11, '#fff', 'center', 700);
         txt('বিকাশ • মোবাইল রিচার্জ', cx, B - h + 58, 11, '#9d174d', 'center', 700);
         ctx.fillStyle = '#bae6fd'; ctx.fillRect(cx - w / 2 + 8, B - 46, w - 16, 28);
         ctx.fillStyle = '#334155'; for (let k = 0; k < 5; k++) rr(cx - w / 2 + 14 + k * ((w - 36) / 5), B - 42, 12, 20, 2), ctx.fill();
@@ -338,6 +341,7 @@ window.ART = function (E) {
     ctx.fillStyle = '#94a3b8'; ctx.fillRect(cx + 60, B - 64, 70, 64); ctx.fillStyle = '#e2e8f0'; ctx.fillRect(cx + 66, B - 58, 58, 26); ctx.fillStyle = '#334155'; ctx.fillRect(cx + 54, B - 70, 82, 8); // guard booth
     person(cx + 148, B, .85, { shirt: '#1e3a8a', pants: '#1e3a8a', ph: 0, skin: SKIN[1] });
     for (let k = 0; k < 6; k++) flowerBed(cx - 200 + k * 76, B + 2, 100 + k);
+    avenue(cx + 300, B, 'বিটুমিন গেট রোড', 'BITUMEN GATE ROAD');
   }
 
   /* ---------- tangled overhead wires ---------- */
@@ -436,5 +440,124 @@ window.ART = function (E) {
     for (let k = 0; k < 5; k++) person(cx - 130 + k * 64, B, .9, { shirt: pickH(SHIRT, k * 2.3), pants: '#334155', skin: pickH(SKIN, k), bag: ['#ef4444', '#2563eb', '#111827'][k % 3], ph: t * 4 + k, dir: k % 2 ? 1 : -1 });
   }
 
-  return { apartment, royalHouse, sheshTable, mosque, uiu, rickshaw, person, randPerson, hawkerVan, shop, tree, pole, billboard, flowerBed, rickStand, vitaminGate, wires, PAL, FRAME, FLOWER };
+
+  /* ---------- named-shop pools: every shop gets its own name ---------- */
+  const NAME_POOL = {
+    biryani: ['হাজি বিরিয়ানি', 'নয়ন বিরিয়ানি', 'মা বিরিয়ানি', 'শাহী বিরিয়ানি হাউস', 'তাজ বিরিয়ানি', 'আলিফ বিরিয়ানি', 'ঢাকাইয়া বিরিয়ানি', 'বিসমিল্লাহ বিরিয়ানি'],
+    restaurant: ['আলকারিম রেস্টুরেন্ট', 'স্বাদ রেস্টুরেন্ট', 'ভোজন বিলাস', 'মধুমতি হোটেল', 'রূপসী বাংলা', 'ঢাকা দরবার', 'বিসমিল্লাহ হোটেল', 'পান্তা-ইলিশ ঘর', 'খাঁটি খানা'],
+    pharmacy: ['আরোগ্য ফার্মেসি', 'লাইফ কেয়ার ফার্মা', 'মেডিকেয়ার', 'নিউ আলো ফার্মেসি', 'আল-আমিন ফার্মেসি', 'হেলথ প্লাস', 'কল্যাণ ফার্মেসি', 'সেবা ফার্মেসি'],
+    bkash: ['রহমান টেলিকম', 'মা টেলিকম', 'সাবিনা ইলেকট্রনিক্স ও টেলিকম', 'নতুন বাজার টেলিকম', 'আপন টেলিকম', 'সততা টেলিকম', 'বাবা-মায়ের দোয়া টেলিকম', 'রিয়াদ মোবাইল ব্যাংকিং'],
+    nagad: ['নগদ-বিকাশ সেন্টার', 'ভাই ভাই টেলিকম', 'তানিয়া টেলিকম', 'আল-মদিনা টেলিকম', 'রাজ মোবাইল সার্ভিস', 'প্রিয় টেলিকম', 'শাপলা টেলিকম'],
+    confection: ['রহিম স্টোর', 'মায়ের দোয়া স্টোর', 'বিসমিল্লাহ স্টোর', 'সততা স্টোর', 'ভাই ভাই স্টোর', 'আপন জেনারেল স্টোর', 'নিউ মদিনা স্টোর', 'সোনালী কনফেকশনারী'],
+    tong: ['আলামিন চা-সিগারেট', 'মামুন টি-স্টল', 'কাদের ভাইয়ের চা', 'রফিক টি-স্টল', 'আড্ডা চা-ঘর', 'বাবুল চা-পান', 'সালাম ভাইয়ের চায়ের দোকান'],
+    tea: ['মায়ের হাতের চা', 'ভাই ভাই টি-স্টল', 'হাসান চা', 'জাকির টি-স্টল', 'নতুন আড্ডা চা'],
+    chop: ['রহমতের চপ-সিঙ্গারা', 'হাজির চপ', 'মায়ের হাতের সিঙ্গারা', 'ঝাল-মুড়ি ও চপ', 'নতুন চপ-পুরি'],
+    garments: ['ফ্যাশন হাউস', 'আয়েশা বস্ত্রালয়', 'ট্রেন্ডি জোন', 'নিউ স্টাইল গার্মেন্টস', 'রংধনু ফ্যাশন', 'বিউটি বুটিক্স'],
+    mobile: ['মোবাইল ঘর', 'স্মার্ট মোবাইল জোন', 'টেক হাব', 'রিয়াল মোবাইল শপ', 'নিউ ডিজিটাল পয়েন্ট'],
+    salon: ['জেন্টস সেলুন', 'স্টাইল জোন সেলুন', 'ক্লাসিক হেয়ার কাট', 'বিউটি পার্লার', 'নিউ লুক সেলুন'],
+    fruits: ['ফল-ফলাদি', 'তাজা ফল ভাণ্ডার', 'ফ্রেশ ফ্রুট কর্নার', 'রসালো ফল ঘর'],
+    furniture: ['আলমারি-খাট-সোফা', 'কাঠের ঘর ফার্নিচার', 'ডিজাইন ফার্নিচার', 'নিউ হোম ফার্নিচার', 'সেগুন কাঠের মহল'],
+    default: ['মুদি দোকান', 'সততা ডিপার্টমেন্টাল', 'মনিহারি ও কসমেটিক্স', 'ভাই ভাই ট্রেডার্স', 'নিউ মার্কেট মুদি']
+  };
+  const poolName = (kind, i) => { const p = NAME_POOL[kind] || NAME_POOL.default; return p[Math.floor(hash(i * 13.37 + 2.1) * p.length) % p.length]; };
+
+  /* ---------- Shwapno-style supermarket outlet (wide, red/orange) ---------- */
+  function shwapno(cx, B) {
+    const t = E.time(), w = 300, h = 150;
+    ctx.fillStyle = '#fff7ed'; ctx.fillRect(cx - w / 2, B - h, w, h);
+    ctx.fillStyle = '#ea580c'; ctx.fillRect(cx - w / 2 - 6, B - h - 34, w + 12, 40);
+    txt('স্বপ্ন', cx - 40, B - h - 4, 34, '#fff', 'center', 700);
+    txt('SHWAPNO', cx + 56, B - h - 8, 18, '#fde68a', 'center', 700);
+    txt('আউটলেট', cx + 10, B - h + 22, 14, '#9a3412', 'center', 700);
+    ctx.fillStyle = '#bae6fd'; ctx.fillRect(cx - w / 2 + 12, B - 96, w - 24, 64);
+    ctx.fillStyle = 'rgba(255,255,255,.5)'; for (let k = 1; k < 5; k++) ctx.fillRect(cx - w / 2 + 12 + k * (w - 24) / 5, B - 96, 2, 64);
+    for (let k = 0; k < 4; k++) { ctx.fillStyle = pickH(['#ef4444', '#22c55e', '#facc15', '#3b82f6'], k + 4); ctx.fillRect(cx - w / 2 + 22 + k * 68, B - 84, 52, 10); ctx.fillRect(cx - w / 2 + 22 + k * 68, B - 62, 52, 10); }
+    ctx.fillStyle = '#1e293b'; ctx.fillRect(cx - 18, B - 52, 36, 52); ctx.fillStyle = 'rgba(186,230,253,.7)'; ctx.fillRect(cx - 14, B - 48, 13, 48); ctx.fillRect(cx + 1, B - 48, 13, 48);
+    ctx.fillStyle = '#9ca3af'; for (let k = 0; k < 5; k++) { ctx.fillRect(cx + w / 2 - 70 + k * 12, B - 18, 9, 10); }
+    person(cx - 96, B, .85, { shirt: '#f97316', pants: '#334155', skin: pickH(SKIN, 2), bag: '#16a34a', ph: t * 3 });
+  }
+
+  /* ---------- big boulevard branching off the main road (Bitumen Gate road, road to UIU) ---------- */
+  function avenue(cx, B, label, sub) {
+    const w = 190, top = B - 190;
+    ctx.fillStyle = '#cbd5e1'; ctx.beginPath(); ctx.moveTo(cx - w / 2, B); ctx.lineTo(cx - 26, top); ctx.lineTo(cx + 26, top); ctx.lineTo(cx + w / 2, B); ctx.fill();
+    ctx.fillStyle = '#475569'; ctx.beginPath(); ctx.moveTo(cx - w / 2 + 14, B); ctx.lineTo(cx - 20, top); ctx.lineTo(cx + 20, top); ctx.lineTo(cx + w / 2 - 14, B); ctx.fill();
+    ctx.strokeStyle = '#facc15'; ctx.lineWidth = 3; ctx.setLineDash([12, 10]); ctx.beginPath(); ctx.moveTo(cx, B); ctx.lineTo(cx, top); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = '#16a34a'; ctx.beginPath(); ctx.moveTo(cx - 8, B); ctx.lineTo(cx - 2, top); ctx.lineTo(cx + 2, top); ctx.lineTo(cx + 8, B); ctx.fill();
+    for (const s of [-1, 1]) for (let k = 0; k < 4; k++) {
+      const f = k / 4, y = B - 10 - f * 170, x = cx + s * (w / 2 - 6 - f * (w / 2 - 28)), sc = 1 - f * .6;
+      ctx.fillStyle = '#6b7280'; ctx.fillRect(x - 1.5 * sc, y - 56 * sc, 3 * sc, 56 * sc); ctx.fillStyle = '#fde68a'; circle(x, y - 58 * sc, 5 * sc);
+      ctx.fillStyle = '#15803d'; circle(x + s * 14 * sc, y - 36 * sc, 14 * sc);
+    }
+    ctx.fillStyle = '#0f766e'; rr(cx - 70, top - 30, 140, 34, 8); ctx.fill();
+    txt(label, cx, top - 12, 18, '#fff', 'center', 700); if (sub) txt(sub, cx, top + 1, 10, '#ccfbf1', 'center', 600);
+  }
+
+  /* ---------- Chef's Table food court (United City) ---------- */
+  function chefsTable(cx, B) {
+    const t = E.time(), w = 380, h = 220;
+    ctx.fillStyle = '#134e4a'; ctx.fillRect(cx - w / 2, B - h, w, h);
+    ctx.fillStyle = '#0f3d3a'; ctx.fillRect(cx - w / 2, B - h, w, 16);
+    ctx.fillStyle = '#7dd3fc'; ctx.fillRect(cx - w / 2 + 16, B - 160, w - 32, 112);
+    ctx.fillStyle = 'rgba(255,255,255,.35)'; for (let k = 1; k < 9; k++) ctx.fillRect(cx - w / 2 + 16 + k * (w - 32) / 9, B - 160, 2, 112);
+    const boards = [['Sushi', '#e11d48'], ['Thai', '#16a34a'], ['Desi', '#f59e0b'], ['Pizza', '#dc2626'], ['Hakka', '#7c3aed'], ['Grill', '#0ea5e9']];
+    boards.forEach((b, k) => { const bx = cx - w / 2 + 26 + k * 56; ctx.fillStyle = b[1]; rr(bx, B - 150, 50, 20, 4); ctx.fill(); txt(b[0], bx + 25, B - 135, 11, '#fff', 'center', 700); });
+    for (let k = 0; k < 6; k++) { const bx = cx - w / 2 + 28 + k * 56; ctx.fillStyle = 'rgba(253,230,138,.8)'; circle(bx + 22, B - 108, 6); ctx.fillStyle = 'rgba(15,23,42,.45)'; ctx.fillRect(bx + 12, B - 100, 20, 36); }
+    const g = ctx.createLinearGradient(cx - 150, 0, cx + 150, 0); g.addColorStop(0, '#b45309'); g.addColorStop(.5, '#fbbf24'); g.addColorStop(1, '#b45309');
+    ctx.fillStyle = g; rr(cx - 160, B - h - 54, 320, 62, 12); ctx.fill();
+    txt("CHEF'S TABLE", cx, B - h - 18, 34, '#3b1d00', 'center', 700);
+    txt('শেফস টেবিল • ফুড কোর্ট', cx, B - h + 2, 14, '#431407', 'center', 700);
+    ctx.fillStyle = '#e2e8f0'; ctx.fillRect(cx - 24, B - 52, 48, 52); ctx.fillStyle = 'rgba(14,165,233,.5)'; ctx.fillRect(cx - 20, B - 48, 18, 48); ctx.fillRect(cx + 2, B - 48, 18, 48);
+    // courtside: umbrellas, tables, fairy lights
+    for (let k = 0; k < 4; k++) {
+      const ux = cx - 150 + k * 100; ctx.fillStyle = '#92400e'; ctx.fillRect(ux - 1.5, B - 58, 3, 58);
+      ctx.fillStyle = pickH(['#ef4444', '#facc15', '#22c55e', '#3b82f6'], k + 9); ctx.beginPath(); ctx.arc(ux, B - 58, 34, Math.PI, 0); ctx.fill();
+      ctx.fillStyle = '#7c2d12'; ctx.fillRect(ux - 22, B - 20, 44, 4); ctx.fillRect(ux - 2, B - 16, 4, 16);
+    }
+    for (let k = 0; k < 14; k++) { ctx.fillStyle = k % 2 ? '#fde047' : '#fb7185'; circle(cx - w / 2 + k * 29 + 6, B - h + 14 + Math.sin(k) * 3, 3 + Math.sin(t * 5 + k) * .8); }
+    person(cx - 112, B - 6, .8, { shirt: '#0ea5e9', pants: '#334155', sit: true, skin: pickH(SKIN, 1) });
+    person(cx + 90, B - 6, .8, { shirt: '#f43f5e', pants: '#1e293b', sit: true, skin: pickH(SKIN, 2), dir: -1, long: true });
+    txt('COURTSIDE • UNITED CITY', cx, B + 14, 11, '#134e4a', 'center', 700);
+  }
+
+  /* ---------- Masjid Al Mustafa: dark Kaaba-toned hall, golden dome, green minor domes, slim minarets ---------- */
+  function mosque2(cx, B) {
+    const t = E.time();
+    ctx.save(); ctx.translate(cx, B); ctx.scale(.74, .74); ctx.translate(-cx, -B);
+    ctx.fillStyle = '#e5e7eb'; ctx.fillRect(cx - 270, B - 30, 540, 30);
+    ctx.fillStyle = '#1f2937'; ctx.fillRect(cx - 170, B - 150, 340, 120);
+    ctx.fillStyle = '#d4a017'; ctx.fillRect(cx - 170, B - 112, 340, 8); ctx.fillRect(cx - 170, B - 150, 340, 5);
+    ctx.fillStyle = '#374151'; for (let k = 0; k < 7; k++) ctx.fillRect(cx - 160 + k * 48, B - 100, 3, 70);
+    const dg = ctx.createLinearGradient(cx - 90, B - 280, cx + 90, B - 190); dg.addColorStop(0, '#fde68a'); dg.addColorStop(.6, '#d4a017'); dg.addColorStop(1, '#92660a');
+    ctx.fillStyle = '#1f2937'; ctx.fillRect(cx - 100, B - 190, 200, 44);
+    ctx.fillStyle = dg; ctx.beginPath(); ctx.arc(cx, B - 190, 98, Math.PI, 0); ctx.fill();
+    ctx.strokeStyle = '#fef3c7'; ctx.lineWidth = 2; for (let k = 1; k < 5; k++) { ctx.beginPath(); ctx.ellipse(cx, B - 190, 98 - k * 19, 98, 0, Math.PI, 0); ctx.stroke(); }
+    ctx.fillStyle = '#d4a017'; ctx.fillRect(cx - 2, B - 312, 4, 26); ctx.beginPath(); ctx.arc(cx + 3, B - 318, 10, .5, 5.8); ctx.fill();
+    for (const dx of [-130, 130]) { ctx.fillStyle = '#15803d'; ctx.beginPath(); ctx.arc(cx + dx, B - 150, 30, Math.PI, 0); ctx.fill(); ctx.fillStyle = '#facc15'; ctx.fillRect(cx + dx - 1.5, B - 190, 3, 12); }
+    for (const dx of [-215, 215]) {
+      ctx.fillStyle = '#f5f5f4'; ctx.fillRect(cx + dx - 11, B - 330, 22, 300); ctx.fillStyle = '#d4a017'; for (const yy of [-250, -200, -150]) ctx.fillRect(cx + dx - 14, B + yy, 28, 6);
+      ctx.fillStyle = '#15803d'; ctx.beginPath(); ctx.moveTo(cx + dx - 14, B - 330); ctx.lineTo(cx + dx, B - 372); ctx.lineTo(cx + dx + 14, B - 330); ctx.fill();
+      ctx.fillStyle = '#facc15'; circle(cx + dx, B - 376, 4);
+    }
+    for (let k = 0; k < 5; k++) { ctx.fillStyle = '#d4a017'; rr(cx - 120 + k * 52, B - 96, 34, 66, 17); ctx.fill(); ctx.fillStyle = 'rgba(253,230,138,.75)'; rr(cx - 116 + k * 52, B - 92, 26, 60, 13); ctx.fill(); }
+    ctx.fillStyle = '#111827'; rr(cx - 150, B - 408, 300, 50, 10); ctx.fill();
+    txt('মসজিদ আল মুস্তফা', cx, B - 382, 26, '#fde68a', 'center', 700); txt('MASJID AL MUSTAFA • UNITED CITY', cx, B - 366, 11, '#e5e7eb', 'center', 600);
+    for (let k = 0; k < 10; k++) { ctx.fillStyle = `rgba(253,224,71,${.5 + Math.sin(t * 3 + k) * .25})`; circle(cx - 140 + k * 31, B - 40, 3.5); }
+    for (let k = 0; k < 4; k++) person(cx - 60 + k * 36, B, .85, { shirt: k % 2 ? '#f8fafc' : '#e2e8f0', pants: '#f1f5f9', skin: pickH(SKIN, k), ph: 0, hair: '#e5e7eb' });
+    ctx.restore();
+    // junction: the road to UIU turns off to the left
+    avenue(cx + 340, B, 'ইউআইইউ ⬅ বামে', 'ভার্সিটি রোড');
+  }
+
+  /* ---------- UIU campus gate (drawn in front of the main block) ---------- */
+  function uiuGate(cx, B) {
+    for (const dx of [-120, 120]) { ctx.fillStyle = '#f1f5f9'; ctx.fillRect(cx + dx - 14, B - 96, 28, 96); ctx.fillStyle = '#e11d48'; ctx.fillRect(cx + dx - 16, B - 100, 32, 8); ctx.fillStyle = '#0369a1'; ctx.fillRect(cx + dx - 8, B - 84, 16, 22); }
+    ctx.fillStyle = '#0c4a6e'; rr(cx - 120, B - 128, 240, 28, 6); ctx.fill(); txt('UIU • স্বাগতম', cx, B - 108, 17, '#fff', 'center', 700);
+    ctx.fillStyle = '#e5e7eb'; ctx.fillRect(cx - 118, B - 22, 236, 5); ctx.fillStyle = '#ef4444'; for (let k = 0; k < 6; k++) ctx.fillRect(cx - 118 + k * 40, B - 22, 20, 5);
+    ctx.fillStyle = '#94a3b8'; ctx.fillRect(cx + 150, B - 60, 52, 60); ctx.fillStyle = '#e2e8f0'; ctx.fillRect(cx + 155, B - 54, 42, 22);
+    person(cx + 132, B, .85, { shirt: '#1e3a8a', pants: '#1e3a8a', ph: 0, skin: pickH(SKIN, 1) });
+  }
+  const uiuFull = (cx, B) => { uiu(cx, B); uiuGate(cx, B + 12); };
+
+  return { apartment, royalHouse, sheshTable: chefsTable, mosque: mosque2, uiu: uiuFull, avenue, shwapno, rickshaw, person, randPerson, hawkerVan, shop, tree, pole, billboard, flowerBed, rickStand, vitaminGate, wires, PAL, FRAME, FLOWER };
 };

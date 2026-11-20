@@ -302,6 +302,11 @@ function startGame() { // menu -> haggle screen
 }
 function beginRide() { // haggle done -> ride
   calibrateTilt(); document.body.classList.toggle('tiltmode', CTRL.mode === 'tilt'); applyCtrlClass(); S.rideT0 = S.t;
+  if (CTRL.mode === 'tilt' && store.get('tm_tiltTut') !== '2') { // short coaching on the first two tilt rides
+    store.set('tm_tiltTut', store.get('tm_tiltTut') === '1' ? '2' : '1');
+    [['📱 টিল্ট চালু', 'ফোন সোজা ধরো — এখন ক্যালিব্রেট হচ্ছে'], ['↔ ফোন হেলাও', 'রিক্সা যেদিকে ঝুঁকবে, উল্টো দিকে হেলাও'], ['⬆ উপরের দিক টানো', 'হাত শক্ত করে ধরবে — ধাক্কার আগে ধরো'], ['⬇ উপরের দিক ঠেলো', 'ধীরে চলবে — মোড়ে ও গর্তে ধীরে']]
+      .forEach((b, k) => later(1 + k * 3.2, () => { if (S.mode === 'play') S.banner = { text: b[0], sub: b[1], t: 0 }; }));
+  }
   const deal = FARE.deal; if (!deal) return;
   audioInit();
   S = newState(); S.mode = 'play'; S.name = FARE.name; S.deal = deal; S.rain = deal.rain; S.mood = deal.mood;
@@ -682,12 +687,14 @@ const NAMED = [
   { x: 222, kind: 'confection', name: 'মায়ের দোয়া স্টোর' },
   { x: 250, kind: 'tong',      name: 'মামুন টি-স্টল' },
   { x: 305, kind: 'hospital',  name: 'পরাজয় হাসপাতাল' },
-  { x: SEG + 28, kind: 'biryani', name: 'কাচ্চি ঘর' }, { x: SEG + 60, kind: 'chop', name: 'চপ-সিঙ্গারা' }, { x: SEG + 92, kind: 'nagad', name: 'মা টেলিকম' },
+  { x: 342, kind: 'shwapno' }, { x: 378, kind: 'restaurant', name: 'আলকারিম রেস্টুরেন্ট' }, { x: 404, kind: 'biryani', name: 'হাজি বিরিয়ানি' },
+  { x: 430, kind: 'restaurant', name: 'ভোজন বিলাস' }, { x: 452, kind: 'pharmacy', name: 'আরোগ্য ফার্মেসি' },
+  { x: SEG + 28, kind: 'biryani', name: 'নয়ন বিরিয়ানি' }, { x: SEG + 60, kind: 'chop', name: 'চপ-সিঙ্গারা' }, { x: SEG + 92, kind: 'nagad', name: 'মা টেলিকম' },
   { x: SEG + 150, kind: 'confection', name: 'ফ্যামিলি স্টোর' }, { x: SEG + 215, kind: 'garments', name: 'ফ্যামিলি ফ্যাশন' },
   { x: 2 * SEG + 40, kind: 'furniture', name: 'আলমারি-খাট-সোফা' }, { x: 2 * SEG + 70, kind: 'furniture', name: 'কাঠের ঘর ফার্নিচার' },
   { x: 2 * SEG + 120, kind: 'tong', name: 'সাঈদ নগর চা' }, { x: 2 * SEG + 215, kind: 'furniture', name: 'ডিজাইন ফার্নিচার' },
   { x: 3 * SEG + 30, kind: 'pharmacy', name: 'সেবা ফার্মেসি' }, { x: 4 * SEG + 30, kind: 'pharmacy', name: 'বিটুমিন ফার্মেসি' },
-  { x: 4 * SEG + 215, kind: 'biryani', name: 'বিরিয়ানি হাউস' }, { x: 6 * SEG + 30, kind: 'nagad', name: 'আল মুস্তাফা টেলিকম' }
+  { x: 4 * SEG + 215, kind: 'biryani', name: 'মা বিরিয়ানি' }, { x: 6 * SEG + 30, kind: 'nagad', name: 'আল মুস্তাফা টেলিকম' }
 ];
 const KINDS = [
   ['nagad', 'tong', 'confection', 'garments', 'mobile', 'pharmacy', 'tong', 'confection', 'restaurant', 'default'],
@@ -995,6 +1002,12 @@ function bar(x, y, w, h, v, col, label) {
 }
 function drawHUD() {
   bar(12, 12, 190, 20, S.life / 100, S.life > 35 ? '#ef4444' : '#b91c1c', '❤ জীবন ' + Math.round(S.life));
+  if (S.mode === 'play' && Math.abs(S.a) > .3 && S.recover <= 0) { // which way to lean back, shown in every control mode
+    const need = S.a > 0 ? -1 : 1, al = clamp((Math.abs(S.a) - .3) / .5, 0, 1);
+    ctx.save(); ctx.globalAlpha = .45 + al * .5; ctx.fillStyle = al > .6 ? '#ef4444' : '#f59e0b'; ctx.font = '700 22px sans-serif'; ctx.textAlign = 'center';
+    const cxx = W / 2 + need * 70; ctx.beginPath(); ctx.moveTo(cxx + need * 28, 150); ctx.lineTo(cxx - need * 14, 132); ctx.lineTo(cxx - need * 14, 168); ctx.fill();
+    ctx.fillText(need < 0 ? 'বামে হেলাও' : 'ডানে হেলাও', W / 2, 190); ctx.restore();
+  }
   if (CTRL.mode === 'tilt' && CTRL.ok) { ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(12, 60, 190, 12); ctx.fillStyle = '#38bdf8'; ctx.fillRect(107 + CTRL.lean * 90 - 4, 58, 8, 16); ctx.fillStyle = '#fff'; ctx.font = '11px sans-serif'; ctx.fillText('📱 টিল্ট', 14, 82); }
   bar(12, 38, 190, 16, S.stamina / 100, S.gripLocked ? '#6b7280' : '#22c55e', '✋ গ্রিপ' + (S.gripLocked ? ' (অবশ)' : ''));
   txt('পয়েন্ট ' + Math.max(0, Math.round(S.score)), W - 12, 28, 22, '#fff', 'right', 700, 'rgba(0,0,0,.55)');
