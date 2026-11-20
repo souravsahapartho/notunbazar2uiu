@@ -26,6 +26,19 @@ Deploy for free: GitHub repo → Settings → Pages → Deploy from branch `main
 
 On phones, on-screen buttons appear.
 
+## Fare haggling
+
+Before each ride you pick where to board and bargain with the auto driver (cut the price with the slider, or take his ask).
+Fair fares live in `BOARDINGS` in `js/game.js`:
+
+| Boarding | Dry | Rain |
+|----------|-----|------|
+| Natun Bazar | ৳50 | ৳50–70 |
+| অফিস লাইন | ৳30–40 | ৳40–50 |
+| দশতলা | ৳30 | ৳30–40 |
+
+Drivers open high (৳60–80 on Natun Bazar, more in rain) and justify it ("ফাঁকা পড়ি", "বড়লোকের স্টুডেন্ট"); the student answers back automatically. About one driver in four is kind and takes the fair fare. Squeeze a greedy driver all the way down and he drives angrily fast; pay generously and he drives gently. Rain adds puddles and a wet-road tint. The অফিস লাইন boarding point is placed at Sahebnagar — change `at` if that is wrong.
+
 ## Rules
 
 - Potholes, puddles and broken speed breakers jolt you. Time your grip just before the wheel hits.

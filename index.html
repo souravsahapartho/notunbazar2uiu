@@ -22,6 +22,12 @@
         <label class="name">তোমার নাম
           <input id="nameInput" maxlength="24" placeholder="যেমন: সৌরভ" autocomplete="off">
         </label>
+        <div class="pick"><span>কোথা থেকে উঠবে?</span>
+          <div id="boardBtns" class="seg"><button data-b="natun" class="on">নতুন বাজার</button><button data-b="office">অফিস লাইন</button><button data-b="tola">দশতলা</button></div>
+        </div>
+        <label class="chk">আবহাওয়া
+          <select id="weatherSel"><option value="auto">যেমন খুশি</option><option value="dry">রোদ</option><option value="rain">বৃষ্টি</option></select>
+        </label>
         <ul class="how">
           <li><b>SPACE</b> চেপে ধরো = সিট শক্ত করে ধরো (স্ট্যামিনা খরচ হয়)</li>
           <li><b>← →</b> (বা A / D) = কাত হয়ে ব্যালান্স করো</li>
@@ -30,8 +36,23 @@
         </ul>
         <label class="chk"><input type="checkbox" id="voiceChk" checked> বাংলা ভয়েস (ব্রাউজার TTS)</label>
         <div id="voiceNote" class="note"></div>
-        <button id="startBtn" class="big">রওনা দাও!</button>
+        <button id="startBtn" class="big">অটো ডাকো 🛺</button>
         <div class="note" id="bestNote"></div>
+      </div>
+    </div>
+
+    <div id="fare" class="overlay hidden">
+      <div class="card fare">
+        <h2 id="fareTitle">ভাড়া ঠিক করো</h2>
+        <div id="fareInfo" class="note"></div>
+        <div id="chat" aria-live="polite"></div>
+        <div class="offer"><input type="range" id="offer" min="10" max="120" step="5" value="50"><b id="offerVal">৳50</b></div>
+        <div class="row wrapRow">
+          <button id="offerBtn" class="big sm">অফার দাও</button>
+          <button id="payBtn">রাজি</button>
+          <button id="nextBtn">অন্য অটো</button>
+        </div>
+        <div class="row"><button id="rideBtn" class="big hidden">🛺 ওঠো!</button></div>
       </div>
     </div>
 

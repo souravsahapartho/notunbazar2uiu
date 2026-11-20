@@ -1,33 +1,73 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;height:100%;background:#0b1020;color:#fff;font-family:"Hind Siliguri","Noto Sans Bengali",system-ui,sans-serif;overflow:hidden}
-#wrap{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
-#stage{position:relative;width:min(100vw,calc((100vh - 8px) * 16 / 9));aspect-ratio:16/9;max-height:100vh}
+:root{--touch:0px}
+html,body{margin:0;height:100%;background:#0b1020;color:#fff;font-family:"Hind Siliguri","Noto Sans Bengali",system-ui,sans-serif;overflow:hidden;overscroll-behavior:none}
+#wrap{height:100vh;height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px}
+/* the 16:9 stage always fits the space left after the touch pad */
+#stage{position:relative;width:min(100vw,calc((100vh - var(--touch)) * 16 / 9));width:min(100vw,calc((100dvh - var(--touch)) * 16 / 9));aspect-ratio:16/9;flex:none}
 canvas{width:100%;height:100%;display:block;border-radius:8px;background:#222;touch-action:none}
-.overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(10,14,30,.72);border-radius:8px;overflow:auto;padding:8px}
-.overlay.hidden{display:none}
+.overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(10,14,30,.72);border-radius:8px;overflow:auto;padding:clamp(4px,1.2vw,12px)}
+.overlay.hidden,.hidden{display:none!important}
 .overlay.low{align-items:flex-end;background:transparent;pointer-events:none}
 .overlay.low .card{pointer-events:auto}
-.card{background:linear-gradient(160deg,#ffefb0,#ffc2a0);color:#2b1a12;border-radius:18px;padding:18px 22px;max-width:640px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,.5);text-align:center}
-.card h1{margin:0;font-size:clamp(26px,5vw,42px)}
-.card h2{margin:2px 0 8px;font-size:clamp(18px,3vw,26px)}
-.route{font-size:clamp(11px,1.6vw,14px);margin:4px 0 10px}
-.how{text-align:left;font-size:clamp(12px,1.7vw,15px);margin:8px auto;padding-left:20px;max-width:520px}
+.card{background:linear-gradient(160deg,#ffefb0,#ffc2a0);color:#2b1a12;border-radius:18px;padding:clamp(8px,2vw,20px) clamp(10px,2.4vw,24px);max-width:660px;width:100%;max-height:100%;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.5);text-align:center;margin:auto}
+.card h1{margin:0;font-size:clamp(22px,5vw,42px)}
+.card h2{margin:2px 0 6px;font-size:clamp(16px,3vw,26px)}
+.route{font-size:clamp(10px,1.6vw,14px);margin:4px 0 8px}
+.how{text-align:left;font-size:clamp(11px,1.7vw,15px);margin:6px auto;padding-left:20px;max-width:540px}
 .how b{background:#2b1a12;color:#ffe08a;border-radius:5px;padding:0 6px}
-.name{display:block;font-weight:600;margin:8px 0}
-.name input{display:block;margin:4px auto 0;width:80%;padding:8px 12px;border-radius:10px;border:2px solid #2b1a12;font:inherit;text-align:center}
-.chk{font-size:14px;display:block;margin:6px 0}
-.note{font-size:12px;opacity:.75;margin:4px 0}
-button{font:inherit;cursor:pointer;border:0;border-radius:12px;padding:8px 16px;background:#2b1a12;color:#ffe08a;font-weight:600}
-button.big{background:#16a34a;color:#fff;font-size:20px;padding:10px 28px;margin-top:6px;box-shadow:0 4px 0 #0e6b31}
+.name{display:block;font-weight:600;margin:6px 0;font-size:clamp(12px,1.8vw,16px)}
+.name input{display:block;margin:4px auto 0;width:80%;padding:6px 12px;border-radius:10px;border:2px solid #2b1a12;font:inherit;text-align:center}
+.pick{margin:6px 0;font-weight:600;font-size:clamp(12px,1.8vw,16px)}
+.seg{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-top:4px}
+.seg button{background:#fff;color:#2b1a12;border:2px solid #2b1a12;padding:6px 12px}
+.seg button.on{background:#2b1a12;color:#ffe08a}
+select{font:inherit;padding:3px 8px;border-radius:8px;border:2px solid #2b1a12;background:#fff}
+.chk{font-size:clamp(12px,1.7vw,14px);display:block;margin:6px 0}
+.note{font-size:clamp(11px,1.5vw,13px);opacity:.8;margin:4px 0}
+button{font:inherit;cursor:pointer;border:0;border-radius:12px;padding:8px 16px;background:#2b1a12;color:#ffe08a;font-weight:600;touch-action:manipulation}
+button:disabled{opacity:.45;cursor:not-allowed}
+button.big{background:#16a34a;color:#fff;font-size:clamp(16px,2.6vw,20px);padding:10px 26px;margin-top:6px;box-shadow:0 4px 0 #0e6b31}
+button.big.sm{padding:8px 18px;margin-top:0}
 button.big:active{transform:translateY(3px);box-shadow:none}
 .row{display:flex;gap:10px;justify-content:center;align-items:center;margin-top:8px}
+.wrapRow{flex-wrap:wrap}
 .end{max-width:520px}
-#endBody{font-size:clamp(13px,2vw,16px);text-align:left;line-height:1.5}
+#endBody{font-size:clamp(12px,2vw,16px);text-align:left;line-height:1.45}
 #endBody table{width:100%;border-collapse:collapse}
 #endBody td{padding:2px 6px;border-bottom:1px dashed rgba(0,0,0,.2)}
 #endBody td:last-child{text-align:right;font-weight:700}
-#touch{display:none;width:min(100vw,720px);padding:0 8px 8px;gap:8px;grid-template-columns:1fr 1fr 2fr 2fr;touch-action:none;user-select:none;-webkit-user-select:none}
-#touch button{padding:18px 4px;font-size:18px;touch-action:none}
+/* haggling */
+.fare{max-width:600px}
+#chat{background:rgba(255,255,255,.55);border-radius:12px;padding:8px;height:clamp(90px,34vh,220px);overflow-y:auto;text-align:left;display:flex;flex-direction:column;gap:5px}
+.msg{padding:5px 10px;border-radius:12px;max-width:86%;font-size:clamp(12px,1.8vw,15px);line-height:1.35}
+.msg.driver{background:#fde68a;align-self:flex-start;border:2px solid #f59e0b}
+.msg.player{background:#bfdbfe;align-self:flex-end;border:2px solid #3b82f6}
+.msg.system{background:#e5e7eb;align-self:center;font-size:12px;border-radius:8px}
+.offer{display:flex;align-items:center;gap:10px;margin-top:8px}
+.offer input{flex:1;accent-color:#16a34a;height:28px}
+.offer b{min-width:64px;font-size:clamp(18px,3vw,24px)}
+/* touch pad */
+#touch{display:none;width:min(100vw,760px);padding:0 8px 8px;gap:8px;grid-template-columns:1fr 1fr 2fr 2fr;touch-action:none;user-select:none;-webkit-user-select:none;flex:none}
+#touch button{padding:16px 4px;font-size:clamp(15px,4vw,20px);touch-action:none;min-height:58px}
 #bG{background:#16a34a;color:#fff}
 #bS{background:#f59e0b;color:#2b1a12}
-@media (pointer:coarse){#touch{display:grid}#stage{width:min(100vw,calc((100vh - 90px) * 16 / 9))}}
+@media (pointer:coarse),(max-width:760px){:root{--touch:84px}#touch{display:grid}}
+/* portrait phones: small stage on top, big thumb pad fills the rest */
+@media (orientation:portrait) and (max-width:760px){
+  :root{--touch:0px}
+  #wrap{justify-content:flex-start}
+  #stage{width:100vw;border-radius:0}
+  #touch{flex:1;width:100vw;max-width:none;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1.3fr;padding:0 8px 10px}
+  #touch button{font-size:clamp(18px,5vw,26px)}
+  #bG{grid-column:1/3;grid-row:2}
+  #bS{grid-column:1/3;grid-row:1;grid-column:1/3}
+  #bL{grid-row:3}#bR{grid-row:3}
+}
+/* short landscape phones: compact cards */
+@media (max-height:520px){
+  .card{padding:6px 12px}.card h1{font-size:22px}.card h2{font-size:15px;margin:0}
+  .how{display:none}.route{display:none}
+  button.big{padding:6px 18px;margin-top:2px}
+  .name{margin:2px 0}.name input{padding:3px 10px}.pick,.chk{margin:3px 0}
+  #chat{height:clamp(60px,26vh,120px)}
+}
