@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<button id="fsBtn" aria-label="fullscreen" title="ফুলস্ক্রিন (F)">⛶</button>
 <div id="wrap">
   <div id="stage">
     <canvas id="game"></canvas>
@@ -25,19 +26,37 @@
         <div class="pick"><span>কোথা থেকে উঠবে?</span>
           <div id="boardBtns" class="seg"><button data-b="natun" class="on">নতুন বাজার</button><button data-b="office">অফিস লাইন</button><button data-b="tola">দশতলা</button></div>
         </div>
-        <label class="chk">আবহাওয়া
-          <select id="weatherSel"><option value="auto">যেমন খুশি</option><option value="dry">রোদ</option><option value="rain">বৃষ্টি</option></select>
-        </label>
-        <ul class="how">
+        <div class="pick"><span>আবহাওয়া</span>
+          <div id="weatherBtns" class="seg"><button data-w="auto" class="on">🎲 যেমন খুশি</button><button data-w="dry">☀️ রোদ</button><button data-w="rain">🌧️ বৃষ্টি</button></div>
+          <select id="weatherSel" hidden><option value="auto">যেমন খুশি</option><option value="dry">রোদ</option><option value="rain">বৃষ্টি</option></select>
+        </div>
+        <ul class="how desk">
           <li><b>SPACE</b> চেপে ধরো = সিট শক্ত করে ধরো (স্ট্যামিনা খরচ হয়)</li>
           <li><b>← →</b> (বা A / D) = কাত হয়ে ব্যালান্স করো</li>
-          <li><b>↓</b> (বা S) = “মামা, ধীরে!” — গাড়ির সাথে গুঁতা এড়াও</li>
-          <li><b>M</b> = মিউট</li>
+          <li><b>↓</b> (বা S) = “মামা, ধীরে!” — গাড়ি আর পথচারীর গুঁতা এড়াও</li>
+          <li><b>M</b> = মিউট &nbsp; <b>F</b> = ফুলস্ক্রিন</li>
         </ul>
-        <label class="chk"><input type="checkbox" id="voiceChk" checked> বাংলা ভয়েস (ব্রাউজার TTS)</label>
+        <ul class="how tch">
+          <li><b>✋ ধরো</b> বাটন চেপে রাখো = সিট শক্ত করে ধরো</li>
+          <li><b>◀ ▶</b> = কাত হয়ে ব্যালান্স করো</li>
+          <li><b>🐢 ধীরে</b> = “মামা, ধীরে!”</li>
+        </ul>
+        <div class="chkrow">
+          <label class="chk"><input type="checkbox" id="voiceChk" checked> 🔊 বাংলা ভয়েস</label>
+          <label class="chk"><input type="checkbox" id="subsChk" checked> 💬 সাবটাইটেল</label>
+        </div>
         <div id="voiceNote" class="note"></div>
-        <button id="startBtn" class="big">অটো ডাকো 🛺</button>
+        <div class="row"><button id="startBtn" class="big">অটো ডাকো 🛺</button><button id="tutBtn" class="alt">❓ কীভাবে খেলব</button></div>
         <div class="note" id="bestNote"></div>
+      </div>
+    </div>
+
+    <div id="tut" class="overlay hidden">
+      <div class="card tutc">
+        <div id="tutBody"></div>
+        <div id="tutDots"></div>
+        <div class="row"><button id="tutPrev" class="alt">◀ আগের</button><button id="tutNext" class="big sm">পরের ▶</button></div>
+        <button id="tutSkip" class="skip">এড়িয়ে যাও ✕</button>
       </div>
     </div>
 
@@ -69,13 +88,12 @@
   </div>
 
   <div id="touch">
-    <button id="bL" aria-label="left">◀</button>
-    <button id="bR" aria-label="right">▶</button>
-    <button id="bS">ধীরে মামা</button>
-    <button id="bG">সিট ধরো</button>
+    <div class="grp lr"><button id="bL" aria-label="left">◀</button><button id="bR" aria-label="right">▶</button></div>
+    <div class="grp ac"><button id="bS">🐢 ধীরে</button><button id="bG">✋ ধরো</button></div>
   </div>
 </div>
 <script src="js/lines.js"></script>
+<script src="js/art.js"></script>
 <script src="js/game.js"></script>
 </body>
 </html>

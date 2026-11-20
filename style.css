@@ -1,73 +1,95 @@
+:root{--touch:0px;--stageBottom:100dvh;--ink:#2b1a12;--gold:#ffd166}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-:root{--touch:0px}
-html,body{margin:0;height:100%;background:#0b1020;color:#fff;font-family:"Hind Siliguri","Noto Sans Bengali",system-ui,sans-serif;overflow:hidden;overscroll-behavior:none}
-#wrap{height:100vh;height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px}
-/* the 16:9 stage always fits the space left after the touch pad */
+html,body{margin:0;height:100%;background:linear-gradient(160deg,#1e1b4b,#7c2d12);font-family:'Hind Siliguri',system-ui,sans-serif;color:var(--ink);overflow:hidden}
+#wrap{height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center}
 #stage{position:relative;width:min(100vw,calc((100vh - var(--touch)) * 16 / 9));width:min(100vw,calc((100dvh - var(--touch)) * 16 / 9));aspect-ratio:16/9;flex:none}
 canvas{width:100%;height:100%;display:block;border-radius:8px;background:#222;touch-action:none}
-.overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(10,14,30,.72);border-radius:8px;overflow:auto;padding:clamp(4px,1.2vw,12px)}
-.overlay.hidden,.hidden{display:none!important}
-.overlay.low{align-items:flex-end;background:transparent;pointer-events:none}
-.overlay.low .card{pointer-events:auto}
-.card{background:linear-gradient(160deg,#ffefb0,#ffc2a0);color:#2b1a12;border-radius:18px;padding:clamp(8px,2vw,20px) clamp(10px,2.4vw,24px);max-width:660px;width:100%;max-height:100%;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.5);text-align:center;margin:auto}
-.card h1{margin:0;font-size:clamp(22px,5vw,42px)}
-.card h2{margin:2px 0 6px;font-size:clamp(16px,3vw,26px)}
-.route{font-size:clamp(10px,1.6vw,14px);margin:4px 0 8px}
-.how{text-align:left;font-size:clamp(11px,1.7vw,15px);margin:6px auto;padding-left:20px;max-width:540px}
-.how b{background:#2b1a12;color:#ffe08a;border-radius:5px;padding:0 6px}
-.name{display:block;font-weight:600;margin:6px 0;font-size:clamp(12px,1.8vw,16px)}
-.name input{display:block;margin:4px auto 0;width:80%;padding:6px 12px;border-radius:10px;border:2px solid #2b1a12;font:inherit;text-align:center}
-.pick{margin:6px 0;font-weight:600;font-size:clamp(12px,1.8vw,16px)}
+.hidden{display:none!important}
+.overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(15,10,40,.62);backdrop-filter:blur(3px);padding:8px;overflow:auto;z-index:5}
+.card{background:linear-gradient(180deg,#fff7e0,#ffe6a8);border:3px solid #f59e0b;border-radius:20px;padding:clamp(10px,2.2vw,22px);max-width:min(560px,100%);max-height:100%;overflow:auto;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.45)}
+h1{margin:0;font-size:clamp(24px,5vw,42px);background:linear-gradient(90deg,#e11d48,#f59e0b,#16a34a);-webkit-background-clip:text;background-clip:text;color:transparent}
+h2{margin:2px 0 6px;font-size:clamp(17px,3vw,26px);color:#9a3412}
+.route{font-size:clamp(11px,1.7vw,14px);margin:4px 0 8px}
+.note{font-size:12px;opacity:.8;margin-top:4px}
+label.name{display:block;font-weight:700;font-size:14px}
+input[type=text],#nameInput{width:100%;margin-top:4px;padding:8px 12px;border:2px solid #f59e0b;border-radius:12px;font:inherit;background:#fff}
+.pick{margin:8px 0;font-weight:700;font-size:14px}
 .seg{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-top:4px}
-.seg button{background:#fff;color:#2b1a12;border:2px solid #2b1a12;padding:6px 12px}
-.seg button.on{background:#2b1a12;color:#ffe08a}
-select{font:inherit;padding:3px 8px;border-radius:8px;border:2px solid #2b1a12;background:#fff}
-.chk{font-size:clamp(12px,1.7vw,14px);display:block;margin:6px 0}
-.note{font-size:clamp(11px,1.5vw,13px);opacity:.8;margin:4px 0}
-button{font:inherit;cursor:pointer;border:0;border-radius:12px;padding:8px 16px;background:#2b1a12;color:#ffe08a;font-weight:600;touch-action:manipulation}
-button:disabled{opacity:.45;cursor:not-allowed}
-button.big{background:#16a34a;color:#fff;font-size:clamp(16px,2.6vw,20px);padding:10px 26px;margin-top:6px;box-shadow:0 4px 0 #0e6b31}
-button.big.sm{padding:8px 18px;margin-top:0}
-button.big:active{transform:translateY(3px);box-shadow:none}
-.row{display:flex;gap:10px;justify-content:center;align-items:center;margin-top:8px}
-.wrapRow{flex-wrap:wrap}
-.end{max-width:520px}
-#endBody{font-size:clamp(12px,2vw,16px);text-align:left;line-height:1.45}
+.seg button{background:#fff;color:var(--ink);border:2px solid #f59e0b;padding:6px 12px;font-size:13px}
+.seg button.on{background:linear-gradient(180deg,#fb923c,#ea580c);color:#fff;border-color:#c2410c}
+.how{text-align:left;font-size:clamp(12px,1.8vw,14px);margin:6px 0;padding-left:20px}
+.how.tch{display:none}
+.chkrow{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+.chk{font-size:13px;font-weight:600;display:inline-flex;gap:6px;align-items:center}
+button{font:inherit;cursor:pointer;border:0;border-radius:14px;padding:9px 16px;background:linear-gradient(180deg,#4c1d95,#2e1065);color:#ffe08a;font-weight:700;touch-action:manipulation;box-shadow:0 3px 0 rgba(0,0,0,.3)}
+button:active{transform:translateY(2px);box-shadow:none}
+button.big{background:linear-gradient(180deg,#22c55e,#15803d);color:#fff;font-size:clamp(15px,2.4vw,20px);padding:11px 22px}
+button.big.sm{font-size:15px;padding:9px 16px}
+button.alt{background:linear-gradient(180deg,#38bdf8,#0369a1);color:#fff}
+button.skip{background:none;color:#7c2d12;box-shadow:none;font-size:13px;margin-top:6px;text-decoration:underline}
+#retryBtn{background:linear-gradient(180deg,#f97316,#c2410c)}
+#menuBtn{background:linear-gradient(180deg,#a855f7,#6b21a8);color:#fff}
+#payBtn{background:linear-gradient(180deg,#16a34a,#166534);color:#fff}
+#nextBtn{background:linear-gradient(180deg,#ec4899,#9d174d);color:#fff}
+.row{display:flex;gap:8px;justify-content:center;margin-top:8px;flex-wrap:wrap}
+/* fare chat */
+#chat{max-height:34vh;overflow:auto;display:flex;flex-direction:column;gap:5px;text-align:left;margin:6px 0}
+.msg{max-width:84%;padding:6px 11px;border-radius:14px;font-size:clamp(12px,1.9vw,15px)}
+.msg.d{align-self:flex-start;background:#fde68a;border:2px solid #f59e0b}
+.msg.p{align-self:flex-end;background:#bfdbfe;border:2px solid #3b82f6}
+.msg.s{align-self:center;background:#e9d5ff;font-size:12px}
+.offer{display:flex;gap:10px;align-items:center}.offer input{flex:1}
+.fare{width:min(520px,100%)}
+/* tutorial */
+.tutc{width:min(460px,100%)}
+.tutIcon{font-size:clamp(40px,9vw,64px)}
+.tutc p{font-size:clamp(13px,2vw,16px);line-height:1.5;margin:6px 0}
+#tutDots{display:flex;gap:6px;justify-content:center;margin:8px 0}
+#tutDots i{width:9px;height:9px;border-radius:50%;background:#fcd34d}
+#tutDots i.on{background:#ea580c;transform:scale(1.3)}
+/* end screen: landscape/desktop = banner left, card right */
+.card.end{width:min(40%,360px);margin-left:auto;font-size:14px}
+#endBody{font-size:clamp(12px,1.8vw,15px);text-align:left;line-height:1.45}
 #endBody table{width:100%;border-collapse:collapse}
 #endBody td{padding:2px 6px;border-bottom:1px dashed rgba(0,0,0,.2)}
 #endBody td:last-child{text-align:right;font-weight:700}
-/* haggling */
-.fare{max-width:600px}
-#chat{background:rgba(255,255,255,.55);border-radius:12px;padding:8px;height:clamp(90px,34vh,220px);overflow-y:auto;text-align:left;display:flex;flex-direction:column;gap:5px}
-.msg{padding:5px 10px;border-radius:12px;max-width:86%;font-size:clamp(12px,1.8vw,15px);line-height:1.35}
-.msg.driver{background:#fde68a;align-self:flex-start;border:2px solid #f59e0b}
-.msg.player{background:#bfdbfe;align-self:flex-end;border:2px solid #3b82f6}
-.msg.system{background:#e5e7eb;align-self:center;font-size:12px;border-radius:8px}
-.offer{display:flex;align-items:center;gap:10px;margin-top:8px}
-.offer input{flex:1;accent-color:#16a34a;height:28px}
-.offer b{min-width:64px;font-size:clamp(18px,3vw,24px)}
+#end{background:transparent;backdrop-filter:none;pointer-events:none}
+#end .card{pointer-events:auto}
+#fsBtn{position:fixed;top:6px;right:6px;z-index:20;padding:4px 10px;font-size:18px;background:rgba(0,0,0,.45);color:#fff;border-radius:10px}
+body.playing #fsBtn{opacity:.55}
 /* touch pad */
-#touch{display:none;width:min(100vw,760px);padding:0 8px 8px;gap:8px;grid-template-columns:1fr 1fr 2fr 2fr;touch-action:none;user-select:none;-webkit-user-select:none;flex:none}
-#touch button{padding:16px 4px;font-size:clamp(15px,4vw,20px);touch-action:none;min-height:58px}
-#bG{background:#16a34a;color:#fff}
-#bS{background:#f59e0b;color:#2b1a12}
-@media (pointer:coarse),(max-width:760px){:root{--touch:84px}#touch{display:grid}}
-/* portrait phones: small stage on top, big thumb pad fills the rest */
-@media (orientation:portrait) and (max-width:760px){
-  :root{--touch:0px}
-  #wrap{justify-content:flex-start}
-  #stage{width:100vw;border-radius:0}
-  #touch{flex:1;width:100vw;max-width:none;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1.3fr;padding:0 8px 10px}
-  #touch button{font-size:clamp(18px,5vw,26px)}
-  #bG{grid-column:1/3;grid-row:2}
-  #bS{grid-column:1/3;grid-row:1;grid-column:1/3}
-  #bL{grid-row:3}#bR{grid-row:3}
+#touch{display:none;width:min(100vw,760px);padding:6px 10px 10px;gap:10px;justify-content:space-between;touch-action:none;user-select:none;-webkit-user-select:none;flex:none}
+#touch .grp{display:flex;gap:10px}
+#touch .lr{flex:1}#touch .ac{flex:1}
+#touch .lr button{flex:1}
+#touch .ac button{flex:1}
+#touch button{padding:12px 4px;font-size:clamp(16px,4.4vw,22px);touch-action:none;min-height:64px}
+#bL,#bR{background:linear-gradient(180deg,#38bdf8,#0369a1);color:#fff}
+#bS{background:linear-gradient(180deg,#f472b6,#be185d);color:#fff}
+#bG{background:linear-gradient(180deg,#4ade80,#15803d);color:#fff;flex:1.5!important}
+@media (pointer:coarse),(max-width:760px){
+  :root{--touch:92px}#touch{display:flex}
+  .how.desk{display:none}.how.tch{display:block}
 }
-/* short landscape phones: compact cards */
-@media (max-height:520px){
-  .card{padding:6px 12px}.card h1{font-size:22px}.card h2{font-size:15px;margin:0}
-  .how{display:none}.route{display:none}
-  button.big{padding:6px 18px;margin-top:2px}
-  .name{margin:2px 0}.name input{padding:3px 10px}.pick,.chk{margin:3px 0}
-  #chat{height:clamp(60px,26vh,120px)}
+/* portrait phone: stage on top, pad below; end card sits under the banner */
+@media (orientation:portrait){
+  #wrap{justify-content:flex-start}
+  #stage{width:100vw}
+  .card.end{position:fixed;left:8px;right:8px;top:calc(var(--stageBottom) + 6px);bottom:8px;width:auto;max-width:none;margin:0;overflow:auto}
+  body.ended #end{position:fixed;inset:0;align-items:flex-start;background:rgba(15,10,40,.35)}
+  body.ended #touch{display:none}
+  .overlay{padding:4px}
+}
+/* landscape phone: full-screen stage, pad floats over the game */
+@media (orientation:landscape) and (pointer:coarse),(orientation:landscape) and (max-height:520px){
+  :root{--touch:0px}
+  #stage{width:min(100vw,calc(100dvh * 16 / 9))}
+  #touch{position:fixed;left:0;right:0;bottom:0;width:100vw;max-width:none;padding:0 14px 10px;pointer-events:none;background:none}
+  #touch .grp{pointer-events:auto;flex:none}
+  #touch .lr{width:min(36vw,260px)}#touch .ac{width:min(40vw,300px)}
+  #touch button{opacity:.78;min-height:58px;backdrop-filter:blur(2px)}
+  body:not(.playing) #touch{display:none}
+  .card{padding:8px 12px}
+  h1{font-size:24px}.route{display:none}
+  .overlay{align-items:flex-start}
 }

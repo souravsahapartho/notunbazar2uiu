@@ -63,3 +63,15 @@ All dialogue lives in `js/lines.js` — edit or add lines freely. If you want re
 - Landmarks are drawn procedurally in `drawLandmark()`
 
 Note: the death-notice scene is a fictional parody and is not an official notice from UIU.
+
+## What's new
+
+- **Phone vs desktop:** phones get a touch pad (✋ ধরো / ◀ ▶ / 🐢 ধীরে) and auto-fullscreen in landscape; desktop uses SPACE, arrows and F for fullscreen.
+- **First-time tutorial** (skippable, re-open from the menu with ❓).
+- **Painted cycle-rickshaws** in traffic, parked at the Natun Bazar and Sahebnagar stands, some waiting at corners.
+- **Street life:** named shops (চা জয়, bKash-style recharge shops with text signs only, pharmacies, biryani, furniture, garments), hawker clothes vans, flowers, overhead wires, pedestrians on the footpath.
+- **Risk:** pedestrians cross the road. Hit one and an angry crowd chases you (keep moving!). Wrong-side overtakes with oncoming traffic. Random jams near the Sahebnagar auto stand and Vitamin Gate.
+- **Voices:** every character keeps one fixed browser Bangla voice (Web Speech API). Subtitles can be switched on/off. No third-party audio is used.
+- **End screen:** portrait phones show the condolence banners on top and score/buttons below; landscape and desktop show banners left and the card on the right.
+
+Shop names and positions live in the `NAMED` list in `js/game.js`; they are stylised, not exact copies of real storefronts.
