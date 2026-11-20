@@ -26,7 +26,7 @@ const STAGES = [
   { bn: 'সাঈদ নগর',           short: 'সাঈদ নগর', en: 'Sayed Nagar',   sky: ['#59b8ff', '#c8efff'], rough: 1.5, puddle: .45 },
   { bn: 'দশতলা',              short: 'দশতলা',    en: '10 Tola',      sky: ['#4aa8ff', '#bfe9ff'], rough: 1.4, puddle: .30 },
   { bn: 'বিটুমিন গেট',         short: 'বিটুমিন',  en: 'Bitumen Gate', sky: ['#6cb4ff', '#ffeec2'], rough: 1.3, puddle: .25 },
-  { bn: 'শেষ টেবিল (ইউ-টার্ন)', short: 'ইউ-টার্ন',  en: 'U-turn',       sky: ['#ff9a62', '#ffd9a0'], rough: 1.2, puddle: .20 },
+  { bn: 'শেফস টেবিল (ইউ-টার্ন)', short: 'ইউ-টার্ন',  en: 'U-turn',       sky: ['#ff9a62', '#ffd9a0'], rough: 1.2, puddle: .20 },
   { bn: 'মসজিদ আল মুস্তাফা',    short: 'মসজিদ',    en: 'Al Mustafa',   sky: ['#c77dff', '#ffc2d6'], rough: 1.1, puddle: .15 },
   { bn: 'ইউআইইউ',             short: 'UIU',      en: 'UIU',          sky: ['#ff7aa2', '#ffd27a'], rough: .6,  puddle: .05 }
 ];
@@ -213,10 +213,12 @@ function onTilt(e) {
   if (a === 90) { side = -b; fwd = g; } else if (a === 270 || a === -90) { side = b; fwd = -g; } else if (a === 180) { side = -g; fwd = -b; } else { side = g; fwd = b; }
   if (!CTRL.base) CTRL.base = { side, fwd };
   CTRL.ok = true;
-  CTRL.lean = clamp((side - CTRL.base.side) / 18, -1, 1) * (CTRL.invert ? -1 : 1);
-  CTRL.pitch = clamp((fwd - CTRL.base.fwd) / 18, -1, 1);
+  const dz = v => Math.abs(v) < 2 ? 0 : v - Math.sign(v) * 2; // 2° dead-zone
+  CTRL.lean = CTRL.lean * .6 + .4 * clamp(dz(side - CTRL.base.side) / 16, -1, 1) * (CTRL.invert ? -1 : 1);
+  CTRL.pitch = CTRL.pitch * .6 + .4 * clamp(dz(fwd - CTRL.base.fwd) / 16, -1, 1);
 }
 function calibrateTilt() { CTRL.base = null; }
+function applyCtrlClass() { const c = document.body.classList; ['manual', 'tilt', 'auto'].forEach(m => c.toggle('c-' + m, CTRL.mode === m)); if (CTRL.mode !== 'tilt') c.remove('tiltfail'); }
 function enableTilt() {
   if (CTRL.live || typeof window.addEventListener !== 'function') return;
   const go = () => { window.addEventListener('deviceorientation', onTilt); CTRL.live = true; };
@@ -257,6 +259,7 @@ function say(who, text, opts) {
 }
 function later(t, fn) { S.pend.push({ t, fn }); }
 function jolt(mag, sign) {
+  if (mag >= 2 && S.mode === 'play' && S.t - (S.lastHard || -99) > 9 && S.life > 12) { S.lastHard = S.t; say('player', pick(L.hardHit), { speak: true, force: true, life: 2.4 }); }
   sign = sign || (Math.random() < .5 ? -1 : 1);
   S.va += sign * mag * .55 * (S.gripping ? .32 : 1);
   S.bobV -= 60 * Math.min(1.5, mag);
@@ -298,7 +301,7 @@ function startGame() { // menu -> haggle screen
   if (!store.get('tm_tut')) showTutorial(openFare); else openFare();
 }
 function beginRide() { // haggle done -> ride
-  calibrateTilt(); document.body.classList.toggle('tiltmode', CTRL.mode === 'tilt');
+  calibrateTilt(); document.body.classList.toggle('tiltmode', CTRL.mode === 'tilt'); applyCtrlClass(); S.rideT0 = S.t;
   const deal = FARE.deal; if (!deal) return;
   audioInit();
   S = newState(); S.mode = 'play'; S.name = FARE.name; S.deal = deal; S.rain = deal.rain; S.mood = deal.mood;
@@ -352,7 +355,7 @@ function finishUi(won) {
   $('end').classList.remove('hidden');
   document.body.classList.remove('playing'); document.body.classList.add('ended');
 }
-function placeOf(i) { return i === 5 ? 'শেষ টেবিলের ইউ-টার্ন' : STAGES[i].bn + ' এলাকা'; }
+function placeOf(i) { return i === 5 ? 'শেফস টেবিলের ইউ-টার্ন' : STAGES[i].bn + ' এলাকা'; }
 
 /* ---------- update ---------- */
 function update(dt) {
@@ -363,6 +366,8 @@ function update(dt) {
 
   // delayed callbacks
   for (let i = S.pend.length - 1; i >= 0; i--) { S.pend[i].t -= dt; if (S.pend[i].t <= 0) { const f = S.pend[i].fn; S.pend.splice(i, 1); f(); } }
+
+  if (CTRL.mode === 'tilt' && !CTRL.ok && S.t - (S.rideT0 || 0) > 2.5 && !document.body.classList.contains('tiltfail')) { document.body.classList.add('tiltfail'); say('player', 'সেন্সর পাচ্ছি না, বাটন দিয়ে চালাও!', { life: 2.2 }); }
 
   // speed
   const cruise = 11.5 + 4.5 * prog + (S.mood === 'angry' ? 2.5 : S.mood === 'happy' ? -1.5 : 0);
@@ -375,7 +380,10 @@ function update(dt) {
   S.speed += clamp(target - S.speed, -acc * dt, acc * dt);
   S.dist += S.speed * dt;
   S.wheel += S.speed * dt * PPM / 19;
-  S.score += S.speed * dt * 1.6;
+  // calm-ride combo: x1..x5 the longer you go without a hit or fall
+  const trouble = S.hits + S.falls; if (trouble !== S.lastTrouble) { S.lastTrouble = trouble; S.calm = 0; } else S.calm = (S.calm || 0) + dt;
+  const combo = Math.min(5, 1 + Math.floor(S.calm / 8)); if (combo > (S.combo || 1) && S.mode === 'play') { S.banner = { text: '🔥 কম্বো x' + combo, sub: 'শান্ত যাত্রা, বোনাস পয়েন্ট!', t: 1.6 }; if (navigator.vibrate) navigator.vibrate(12); } S.combo = combo;
+  S.score += S.speed * dt * 1.6 * combo;
 
   // stage change
   const si = stageOf(S.dist);
@@ -414,7 +422,8 @@ function update(dt) {
   }
 
   // balance physics
-  const lean = ctrlLean();
+  S.leanS = (S.leanS || 0) + (ctrlLean() - (S.leanS || 0)) * Math.min(1, dt * 14); // eased lean: no jerk from taps
+  const lean = S.leanS;
   const rough = STAGES[S.stageIdx].rough * (S.rain ? 1.12 : 1);
   let ac = .15 * S.a + lean * (S.gripping ? 3 : 5.4);
   ac += (Math.random() - .5) * .3 * rough * (S.speed / 15) * 4;
@@ -986,6 +995,7 @@ function bar(x, y, w, h, v, col, label) {
 }
 function drawHUD() {
   bar(12, 12, 190, 20, S.life / 100, S.life > 35 ? '#ef4444' : '#b91c1c', '❤ জীবন ' + Math.round(S.life));
+  if (CTRL.mode === 'tilt' && CTRL.ok) { ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(12, 60, 190, 12); ctx.fillStyle = '#38bdf8'; ctx.fillRect(107 + CTRL.lean * 90 - 4, 58, 8, 16); ctx.fillStyle = '#fff'; ctx.font = '11px sans-serif'; ctx.fillText('📱 টিল্ট', 14, 82); }
   bar(12, 38, 190, 16, S.stamina / 100, S.gripLocked ? '#6b7280' : '#22c55e', '✋ গ্রিপ' + (S.gripLocked ? ' (অবশ)' : ''));
   txt('পয়েন্ট ' + Math.max(0, Math.round(S.score)), W - 12, 28, 22, '#fff', 'right', 700, 'rgba(0,0,0,.55)');
   txt(Math.round(S.speed * 3.6) + ' কিমি/ঘ • হর্ন ' + S.honks, W - 12, 50, 14, '#fff', 'right', 600, 'rgba(0,0,0,.55)');
@@ -1366,7 +1376,7 @@ const TUT = () => {
     ['✋', 'সিট ধরো', t ? 'ডানদিকের সবুজ <b>✋ ধরো</b> বাটন চেপে ধরে রাখো। গর্তে পড়ার ঠিক আগে ধরো — নইলে ঝাঁকুনিতে ছিটকে পড়বে। ধরে রাখলে স্ট্যামিনা কমে!' : '<b>SPACE</b> চেপে ধরে রাখো। গর্তে পড়ার ঠিক আগে ধরো — নইলে ঝাঁকুনিতে ছিটকে পড়বে। ধরে রাখলে স্ট্যামিনা কমে!'],
     ['⚖️', 'ব্যালান্স', t ? 'বাঁয়ের <b>◀ ▶</b> বাটনে উল্টো দিকে কাত হয়ে ব্যালান্স রাখো। নিচের মিটার সবুজ অংশে রাখো।' : '<b>← →</b> (বা A / D) দিয়ে উল্টো দিকে কাত হয়ে ব্যালান্স রাখো। নিচের মিটার সবুজ অংশে রাখো।'],
     ['🐢', 'ধীরে মামা!', (t ? '<b>🐢 ধীরে</b> বাটন' : '<b>↓</b> (বা S)') + ' চেপে সামনের গাড়ি আর রাস্তা-পার-হওয়া মানুষের সাথে গুঁতা এড়াও। মানুষকে মারলে জনতা তাড়া করবে — তখন থেমো না!'],
-    ['💰', 'দরদাম', 'স্ট্যান্ডে মামার সাথে কথা বলে ভাড়া ঠিক করো — দর বলো, “গরিব মানুষ মামা” বা “এখনো বিয়ে করি নাই” বলে অনুরোধ করো। চাইলে ভাড়া না ঠিক করেই উঠে পড়তে পারো, কিন্তু নামার সময় কত লাগে কে জানে!']
+    ['💰', 'দরদাম', 'স্ট্যান্ডে মামার সাথে কথা বলে ভাড়া ঠিক করো — দর বলো, “গরিব মানুষ মামা” বা “স্টুডেন্ট মামা” বলে অনুরোধ করো। চাইলে ভাড়া না ঠিক করেই উঠে পড়তে পারো, কিন্তু নামার সময় কত লাগে কে জানে!']
   ];
 };
 let tutI = 0, tutDone = null;
@@ -1470,9 +1480,9 @@ const savedName = store.get('tm_name'); if (savedName) $('nameInput').value = sa
 CTRL.mode = ['manual', 'tilt', 'auto'].includes(store.get('tm_ctrl')) ? store.get('tm_ctrl') : (('ontouchstart' in window) || (navigator.maxTouchPoints > 0) ? 'auto' : 'manual'); // first visit: phones start on the easiest mode
 $('invChk').checked = store.get('tm_inv') === '1';
 Array.from($('ctrlBtns').children).forEach(c => c.classList.toggle('on', c.dataset.c === CTRL.mode));
-$('ctrlBtns').addEventListener('click', e => { const t = e.target; if (!t || !t.dataset || !t.dataset.c) return; CTRL.mode = t.dataset.c; store.set('tm_ctrl', CTRL.mode); Array.from($('ctrlBtns').children).forEach(c => c.classList.toggle('on', c === t)); if (CTRL.mode === 'tilt') enableTilt(); $('ctrlNote').textContent = CTRL_NOTE[CTRL.mode]; });
-const CTRL_NOTE = { manual: 'বাটন বা কিবোর্ড: ◀ ▶ হেলাও, ✋ ধরো, 🐢 ধীরে।', tilt: 'ফোন ডানে-বামে কাত করলে অটো হেলবে। ফোনের উপরের দিক নিজের দিকে টানলে হাত ধরবে, দূরে ঠেললে ধীরে চলবে। উল্টো মনে হলে "উল্টো" টিক দাও।', auto: 'গেম নিজেই ব্যালান্স রাখবে। শুধু দরকারে ✋ আর 🐢 চাপো — সবচেয়ে সহজ।' };
-$('ctrlNote').textContent = CTRL_NOTE[CTRL.mode];
+$('ctrlBtns').addEventListener('click', e => { const t = e.target; if (!t || !t.dataset || !t.dataset.c) return; CTRL.mode = t.dataset.c; store.set('tm_ctrl', CTRL.mode); Array.from($('ctrlBtns').children).forEach(c => c.classList.toggle('on', c === t)); if (CTRL.mode === 'tilt') enableTilt(); applyCtrlClass(); $('ctrlNote').textContent = CTRL_NOTE[CTRL.mode]; });
+const CTRL_NOTE = { manual: 'বাটন বা কিবোর্ড: ◀ ▶ হেলাও, ✋ ধরো, 🐢 ধীরে।', tilt: 'টিল্ট (Tilt): ফোন ডানে-বামে হেলালে রিক্সা হেলবে, তাই স্ক্রিনে ◀ ▶ বাটন থাকবে না। ফোনের উপরের দিক নিজের দিকে টানলে হাত ধরবে, দূরে ঠেললে ধীরে চলবে। দিক উল্টো মনে হলে "উল্টো" টিক দাও। সেন্সর না পেলে বাটন নিজে থেকেই ফিরে আসবে।', auto: 'অটো (Auto balance): গেম নিজেই ব্যালান্স রাখবে, তাই ◀ ▶ নেই। শুধু দরকারে ✋ আর 🐢 চাপো — সবচেয়ে সহজ।' };
+$('ctrlNote').textContent = CTRL_NOTE[CTRL.mode]; applyCtrlClass();
 FARE.gender = store.get('tm_gender') === 'f' ? 'f' : 'm';
 Array.from($('genBtns').children).forEach(c => c.classList.toggle('on', c.dataset && c.dataset.g === FARE.gender));
 const best = store.get('tm_best'); $('bestNote').textContent = best ? 'সর্বোচ্চ স্কোর: ' + best : '';

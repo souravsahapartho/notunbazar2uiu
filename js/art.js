@@ -332,7 +332,7 @@ window.ART = function (E) {
     ctx.fillStyle = '#0f766e'; ctx.beginPath(); ctx.moveTo(cx - 190, B - 200); ctx.quadraticCurveTo(cx, B - 292, cx + 200, B - 200); ctx.lineTo(cx + 200, B - 250); ctx.quadraticCurveTo(cx, B - 342, cx - 190, B - 250); ctx.closePath(); ctx.fill();
     ctx.strokeStyle = '#fde047'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(cx - 190, B - 250); ctx.quadraticCurveTo(cx, B - 342, cx + 200, B - 250); ctx.stroke();
     txt('বিটুমিন গেট', cx + 5, B - 268, 38, '#fef08a', 'center', 700, '#064e3b');
-    txt('VITAMIN GATE', cx + 5, B - 246, 14, '#d1fae5', 'center', 700);
+    txt('BITUMEN GATE', cx + 5, B - 246, 14, '#d1fae5', 'center', 700);
     ctx.fillStyle = '#ef4444'; rr(cx - 28, B - 316, 56, 24, 12); ctx.fill(); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(cx + 4, B - 304, 12, -1.57, 1.57); ctx.fillRect(cx, B - 316, 4, 24); ctx.fill();
     for (let k = 0; k < 9; k++) { const lx = cx - 150 + k * 38, sag = Math.sin((k / 8) * Math.PI) * 10; ctx.strokeStyle = '#475569'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(lx, B - 222 - sag); ctx.lineTo(lx, B - 210 - sag); ctx.stroke(); ctx.fillStyle = k % 2 ? '#fde047' : '#fb923c'; circle(lx, B - 204 - sag, 5 + Math.sin(t * 4 + k) * .6); }
     ctx.fillStyle = '#94a3b8'; ctx.fillRect(cx + 60, B - 64, 70, 64); ctx.fillStyle = '#e2e8f0'; ctx.fillRect(cx + 66, B - 58, 58, 26); ctx.fillStyle = '#334155'; ctx.fillRect(cx + 54, B - 70, 82, 8); // guard booth
@@ -388,7 +388,8 @@ window.ART = function (E) {
     ctx.fillStyle = '#14532d'; ctx.fillRect(cx - 150, B - 106, 300, 6);
     const g = ctx.createLinearGradient(cx - 110, 0, cx + 110, 0); g.addColorStop(0, '#be123c'); g.addColorStop(1, '#f97316');
     ctx.fillStyle = g; rr(cx - 96, B - 176, 192, 44, 8); ctx.fill();
-    txt('শেষ টেবিল', cx, B - 144, 32, '#fffbeb', 'center', 700, 'rgba(0,0,0,.35)');
+    txt('শেফস টেবিল', cx, B - 153, 27, '#fffbeb', 'center', 700, 'rgba(0,0,0,.35)');
+    txt("CHEF'S TABLE", cx, B - 137, 12, '#fde68a', 'center', 700);
     ctx.strokeStyle = '#334155'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(cx - 140, B - 100); ctx.quadraticCurveTo(cx, B - 80, cx + 140, B - 100); ctx.stroke();
     for (let k = 0; k < 9; k++) { const lx = cx - 128 + k * 32, ly = B - 92 + Math.sin((k / 8) * Math.PI) * 10; ctx.fillStyle = k % 2 ? '#fde047' : '#fb7185'; circle(lx, ly, 4 + Math.sin(t * 5 + k) * .5); }
     ctx.fillStyle = '#92400e'; ctx.fillRect(cx - 120, B - 40, 100, 7); ctx.fillRect(cx + 20, B - 40, 100, 7);

@@ -144,3 +144,10 @@ button,.chk{-webkit-user-select:none;user-select:none}
   #fare .row button,#fare .offer button{min-height:46px;font-size:14px;padding:8px 12px}
   #fare .row{gap:8px}
 }
+
+/* control-mode aware touch pad */
+body.c-tilt:not(.tiltfail) #touch{display:none!important}
+body.c-auto #touch .lr{display:none}
+body.c-auto #touch{justify-content:center}
+body.c-auto #touch .ac{max-width:520px;margin:0 auto}
+#ctrlBtns button small{display:block;font-size:10px;font-weight:600;opacity:.8}

@@ -108,7 +108,11 @@ The game plays a clip when it exists and falls back to browser TTS otherwise. Us
 
 ## Controls (pick in the menu)
 - 🎮 **Manual** – ◀ ▶ lean, ✋ grip, 🐢 slow (or arrow keys / Space / S).
-- 📱 **Phone tilt** – roll the phone left/right to lean; tip the top edge toward you to grip, push it away to slow down. Calibrates at ride start. iOS asks for motion permission. Tick "↔ উল্টো" if the direction feels reversed on your phone (sensor axes differ by device; untested on real hardware).
-- 🤖 **Auto balance** – the game keeps balance; you only grip/slow down. Easiest.
+- 📱 **Tilt (ফোন হেলানো)** – roll the phone left/right to lean; tip the top edge toward you to grip, push it away to slow down. Calibrates at ride start. iOS asks for motion permission. Tick "↔ উল্টো" if the direction feels reversed on your phone (sensor axes differ by device; untested on real hardware).
+- 🤖 **Auto balance** – the game keeps balance; you only grip/slow down. Easiest (default on phones).
+
+In Tilt mode the on-screen ◀ ▶ pad is hidden (it returns automatically if no motion sensor is found); in Auto mode only ✋ 🐢 remain.
 
 Physics was also made more forgiving (slower stamina drain, smaller fall/hit penalties, self-righting).
+
+- Fixed signs: BITUMEN GATE, CHEF'S TABLE (শেফস টেবিল). "বিয়া করি নাই" is now only cried on hard crashes/death; haggling uses a plain student plea. New 🔥 calm-ride combo (x1–x5). Lean input is eased for smoother control.
