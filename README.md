@@ -75,3 +75,8 @@ Note: the death-notice scene is a fictional parody and is not an official notice
 - **End screen:** portrait phones show the condolence banners on top and score/buttons below; landscape and desktop show banners left and the card on the right.
 
 Shop names and positions live in the `NAMED` list in `js/game.js`; they are stylised, not exact copies of real storefronts.
+
+## Rickshaw mode & Natun Bazar outlets
+
+- Pick **🚲 রিক্সা** in the menu to ride a painted cycle-rickshaw instead of the auto: slower, with its own fare range (guessed: Natun Bazar ৳60–80 dry, ৳90–120 rain).
+- Natun Bazar now has a Cha Joy-style outlet (generic look, text sign only), a bKash/Nagad agent, confectionery stores, tea tongs, "লাস্ট ফার্মা" pharmacy and the "পরাজয় হাসপাতাল" between Natun Bazar and Family Bazar. Edit `NAMED` in `js/game.js` to change names/positions.

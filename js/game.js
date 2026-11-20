@@ -37,9 +37,9 @@ const UTURN_AT = 5 * SEG + 150;
 const UTURN_DUR = 3.2;
 // fair fare ranges in taka: [low, high]. Edit freely.
 const BOARDINGS = [
-  { id: 'natun',  bn: 'নতুন বাজার', at: 0,       dry: [50, 50], rain: [50, 70] },
-  { id: 'office', bn: 'অফিস লাইন',  at: 2 * SEG, dry: [30, 40], rain: [40, 50] },
-  { id: 'tola',   bn: 'দশতলা',     at: 3 * SEG, dry: [30, 30], rain: [30, 40] }
+  { id: 'natun',  bn: 'নতুন বাজার', at: 0,       dry: [50, 50], rain: [50, 70], rdry: [60, 80], rrain: [90, 120] },
+  { id: 'office', bn: 'অফিস লাইন',  at: 2 * SEG, dry: [30, 40], rain: [40, 50], rdry: [40, 50], rrain: [60, 70] },
+  { id: 'tola',   bn: 'দশতলা',     at: 3 * SEG, dry: [30, 30], rain: [30, 40], rdry: [30, 40], rrain: [50, 60] }
 ];
 
 /* ---------- helpers ---------- */
@@ -144,6 +144,7 @@ const VP = {
   hawker: { p: .88, r: 1.22, i: 1 }, tea: { p: .95, r: 1.1, i: 0 }, chop: { p: .8, r: 1.15, i: 0 }
 };
 function voiceKey(who, ref) {
+  if (who === 'driver' && S && S.vehicle === 'rick') return 'rick';
   if (who === 'other') return (ref && ref.type) || 'car';
   if (who === 'amb') return (ref && ref.key) || 'hawker';
   return who;
@@ -231,6 +232,7 @@ function beginRide() { // haggle done -> ride
   const deal = FARE.deal; if (!deal) return;
   audioInit();
   S = newState(); S.mode = 'play'; S.name = FARE.name; S.deal = deal; S.rain = deal.rain; S.mood = deal.mood;
+  S.vehicle = FARE.vehicle;
   S.dist = deal.at; S.stageIdx = stageOf(deal.at); S.nextRoadX = S.dist + 30; S.nextVehX = S.dist + 75; S.nextPedX = S.dist + 60;
   S.jams = { 2: Math.random() < .5, 4: Math.random() < .55 };
   S.score = Math.max(0, deal.ask0 - deal.paid) * 3 - Math.max(0, deal.paid - deal.hi) * 2;
@@ -291,8 +293,9 @@ function update(dt) {
   for (let i = S.pend.length - 1; i >= 0; i--) { S.pend[i].t -= dt; if (S.pend[i].t <= 0) { const f = S.pend[i].fn; S.pend.splice(i, 1); f(); } }
 
   // speed
-  const cruise = 12.5 + 5 * prog + (S.mood === 'angry' ? 2.5 : S.mood === 'happy' ? -1.5 : 0);
-  let target = inp.slow ? 5.5 : cruise;
+  const rk = S.vehicle === 'rick' ? .55 : 1;
+  const cruise = (12.5 + 5 * prog + (S.mood === 'angry' ? 2.5 : S.mood === 'happy' ? -1.5 : 0)) * rk;
+  let target = inp.slow ? 5.5 * rk : cruise;
   if (S.uturn.state === 1) target = 6;
   if (S.recover > 0) target = Math.min(target, 7);
   if (S.stopT > 0) target = 0;
@@ -586,17 +589,27 @@ function drawFarLayer(par, spacing, minH, maxH, alpha, seed) {
 const BOARDS = ['ভর্তি চলছে', 'সেল সেল সেল!', 'ভাঙা রাস্তা সংস্কার চাই!', 'আজই ডেলিভারি', 'খাঁটি মধু'];
 // real-world-style named shops along the route (edit freely)
 const NAMED = [
-  { x: 22, kind: 'bkash', name: 'রহমান টেলিকম' }, { x: 48, kind: 'tea', name: 'চা জয়' }, { x: 78, kind: 'restaurant', name: 'নতুন বাজার রেস্টুরেন্ট' },
-  { x: SEG + 28, kind: 'biryani', name: 'কাচ্চি ঘর' }, { x: SEG + 60, kind: 'chop', name: 'চপ-সিঙ্গারা' }, { x: SEG + 92, kind: 'bkash', name: 'মা টেলিকম' },
-  { x: SEG + 215, kind: 'garments', name: 'ফ্যামিলি ফ্যাশন' }, { x: 2 * SEG + 40, kind: 'furniture', name: 'আলমারি-খাট-সোফা' },
-  { x: 2 * SEG + 70, kind: 'furniture', name: 'কাঠের ঘর ফার্নিচার' }, { x: 2 * SEG + 215, kind: 'furniture', name: 'ডিজাইন ফার্নিচার' },
+  { x: 6,   kind: 'nagad',     name: 'নগদ-বিকাশ সেন্টার' },
+  { x: 36,  kind: 'chajoy',    name: 'চা জয়' },
+  { x: 66,  kind: 'confection', name: 'রহিম স্টোর' },
+  { x: 90,  kind: 'tong',      name: 'আলামিন চা-সিগারেট' },
+  { x: 112, kind: 'pharmacy',  name: 'লাস্ট ফার্মা' },
+  { x: 168, kind: 'restaurant', name: 'নতুন বাজার রেস্টুরেন্ট' },
+  { x: 196, kind: 'bkash',     name: 'রহমান টেলিকম' },
+  { x: 222, kind: 'confection', name: 'মায়ের দোয়া স্টোর' },
+  { x: 250, kind: 'tong',      name: 'মামুন টি-স্টল' },
+  { x: 305, kind: 'hospital',  name: 'পরাজয় হাসপাতাল' },
+  { x: SEG + 28, kind: 'biryani', name: 'কাচ্চি ঘর' }, { x: SEG + 60, kind: 'chop', name: 'চপ-সিঙ্গারা' }, { x: SEG + 92, kind: 'nagad', name: 'মা টেলিকম' },
+  { x: SEG + 150, kind: 'confection', name: 'ফ্যামিলি স্টোর' }, { x: SEG + 215, kind: 'garments', name: 'ফ্যামিলি ফ্যাশন' },
+  { x: 2 * SEG + 40, kind: 'furniture', name: 'আলমারি-খাট-সোফা' }, { x: 2 * SEG + 70, kind: 'furniture', name: 'কাঠের ঘর ফার্নিচার' },
+  { x: 2 * SEG + 120, kind: 'tong', name: 'সাহেবনগর চা' }, { x: 2 * SEG + 215, kind: 'furniture', name: 'ডিজাইন ফার্নিচার' },
   { x: 3 * SEG + 30, kind: 'pharmacy', name: 'সেবা ফার্মেসি' }, { x: 4 * SEG + 30, kind: 'pharmacy', name: 'ভিটামিন ফার্মেসি' },
-  { x: 4 * SEG + 215, kind: 'biryani', name: 'বিরিয়ানি হাউস' }, { x: 6 * SEG + 30, kind: 'bkash', name: 'আল মুস্তাফা টেলিকম' }
+  { x: 4 * SEG + 215, kind: 'biryani', name: 'বিরিয়ানি হাউস' }, { x: 6 * SEG + 30, kind: 'nagad', name: 'আল মুস্তাফা টেলিকম' }
 ];
 const KINDS = [
-  ['bkash', 'tea', 'garments', 'mobile', 'pharmacy', 'biryani', 'restaurant', 'default'],
-  ['biryani', 'chop', 'garments', 'garments', 'restaurant', 'bkash', 'pharmacy', 'fruits', 'default'],
-  ['furniture', 'furniture', 'tea', 'mobile', 'default', 'pharmacy', 'salon'],
+  ['nagad', 'tong', 'confection', 'garments', 'mobile', 'pharmacy', 'tong', 'confection', 'restaurant', 'default'],
+  ['biryani', 'chop', 'garments', 'garments', 'restaurant', 'nagad', 'confection', 'pharmacy', 'fruits', 'default'],
+  ['furniture', 'furniture', 'tong', 'mobile', 'default', 'confection', 'pharmacy', 'salon'],
   ['pharmacy', 'restaurant', 'bkash', 'garments', 'default', 'salon'],
   ['pharmacy', 'biryani', 'restaurant', 'bkash', 'tea'],
   ['tea', 'default', 'fruits', 'chop'],
@@ -623,7 +636,7 @@ function drawStreetLife() {
   const h0 = Math.floor((S.dist - 30) / 9), h1 = Math.ceil((S.dist + 30) / 9);
   for (let i = h0; i <= h1; i++) {
     const wx = i * 9 + hash(i) * 3, st = stageOf(wx), pr = st === 0 ? .85 : st === 1 ? .7 : st === 2 ? .3 : .12;
-    if (hash(i * 5.3) > pr || LM.some(l => Math.abs(wx - l) < 6)) continue;
+    if (hash(i * 5.3) > pr || LM.some(l => Math.abs(wx - l) < 6) || NAMED.some(n => (n.kind === 'chajoy' || n.kind === 'hospital') && Math.abs(wx - n.x) < 7)) continue;
     const cx = X(wx); if (cx < -150 || cx > W + 150) continue;
     A.hawkerVan(cx, SIDEY + (hash(i * 8.2) > .55 ? 50 : 34), i, S.t, S.rain);
   }
@@ -797,6 +810,9 @@ function drawAuto() {
   ctx.scale(S.face * S.turnSx, 1);
   const wa = S.wheel;
   ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(0, 4 - S.bobY, 90, 8, 0, 0, 7); ctx.fill();
+  const rick = S.vehicle === 'rick';
+  if (rick) A.rickshaw(0, 0, 1.12, { col: '#dc2626', seed: 12, t: S.t, wa: wa, pa: S.t * S.speed * 1.4, puller: true, cap: '#e5e7eb', lungi: '#2563eb', shirt: '#f1e4c8', plate: 'ঢাকা-১২' });
+  if (!rick) {
   // seats
   ctx.fillStyle = '#7f1d1d'; ctx.fillRect(-70, -74, 70, 12); ctx.fillRect(-74, -112, 8, 40);
   ctx.fillStyle = '#3f2a1d'; ctx.fillRect(2, -72, 38, 10);
@@ -810,6 +826,7 @@ function drawAuto() {
   ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(24, -118, 11, Math.PI, 0); ctx.fill();
   ctx.strokeStyle = '#222'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(34, -92); ctx.lineTo(50, -80); ctx.stroke();
   ctx.fillStyle = '#d6a77a'; ctx.beginPath(); ctx.arc(34, -92, 4, 0, 7); ctx.fill();
+  }
   // passenger
   const th = S.a * .6, hipx = -38, hipy = -72;
   ctx.save(); ctx.translate(hipx, hipy); ctx.rotate(th);
@@ -833,12 +850,14 @@ function drawAuto() {
     if (S.gripping) { ctx.fillStyle = '#fde047'; ctx.beginPath(); ctx.arc(hx, hy, 6, 0, 7); ctx.fill(); }
   }
   // rail + canopy (drawn after so arms look like they grip)
+  if (!rick) {
   ctx.fillStyle = '#d97706'; ctx.fillRect(-78, -118, 8, 58); ctx.fillRect(40, -118, 6, 58);
   ctx.fillStyle = '#fbbf24'; rr(-84, -126, 134, 12, 5); ctx.fill();
   ctx.strokeStyle = S.gripping ? '#fde047' : '#9ca3af'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(-40, -101); ctx.lineTo(0, -101); ctx.stroke();
   ctx.fillStyle = 'rgba(190,230,255,.45)'; ctx.beginPath(); ctx.moveTo(44, -114); ctx.lineTo(66, -62); ctx.lineTo(44, -62); ctx.closePath(); ctx.fill();
   wheel(-48, -19, 19, wa); wheel(52, -19, 19, wa);
   ctx.fillStyle = '#fde68a'; ctx.fillRect(78, -48, 6, 8);
+  } else { ctx.strokeStyle = S.gripping ? '#fde047' : '#9ca3af'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(-40, -101); ctx.lineTo(0, -101); ctx.stroke(); }
   ctx.restore();
   txt(S.name, S.camX - S.face * 38, GY - 178 + S.bobY, 14, '#fff', 'center', 700, 'rgba(0,0,0,.6)');
 }
@@ -1051,10 +1070,11 @@ function frame(now) {
 
 /* ---------- fare haggling ---------- */
 const HG = L.haggle;
-const FARE = { name: 'বন্ধু', boarding: 'natun', weather: 'auto', rain: false, driver: null, deal: null, rerolls: 0 };
+const FARE = { name: 'বন্ধু', vehicle: 'auto', boarding: 'natun', weather: 'auto', rain: false, driver: null, deal: null, rerolls: 0 };
 const r5 = v => Math.round(v / 5) * 5;
 const fmt = (s, p) => s.replace(/\{p\}/g, p);
-const fairOf = (b, rain) => rain ? b.rain : b.dry;
+const fairOf = (b, rain) => FARE.vehicle === 'rick' ? (rain ? b.rrain : b.rdry) : (rain ? b.rain : b.dry);
+const vName = () => FARE.vehicle === 'rick' ? 'রিক্সা' : 'অটো';
 const fairTxt = d => d.lo === d.hi ? '' + d.lo : d.lo + '–' + d.hi;
 const boardingOf = id => BOARDINGS.find(x => x.id === id) || BOARDINGS[0];
 
@@ -1084,16 +1104,16 @@ function setFareButtons(open) {
   $('offerBtn').disabled = !open; $('offer').disabled = !open; $('payBtn').disabled = !open;
   $('payBtn').textContent = open && d ? `৳${d.ask}-এ রাজি` : 'রাজি';
   $('nextBtn').disabled = FARE.rerolls >= 3 || !!FARE.deal;
-  $('nextBtn').textContent = `অন্য অটো (${Math.max(0, 3 - FARE.rerolls)})`;
+  $('nextBtn').textContent = `অন্য ${vName()} (${Math.max(0, 3 - FARE.rerolls)})`;
 }
 function showDriver() {
   const b = boardingOf(FARE.boarding), d = FARE.driver = newDriver(b, FARE.rain), f = fairOf(b, FARE.rain);
   $('fareTitle').textContent = `${b.bn} → ইউআইইউ`;
   $('fareInfo').textContent = (FARE.rain ? '☔ বৃষ্টি হচ্ছে' : '☀️ আকাশ পরিষ্কার') + ' • ন্যায্য ভাড়া ৳' + (f[0] === f[1] ? f[0] : f[0] + '–' + f[1]);
-  chat('system', FARE.rerolls ? 'আরেকটা অটো এসে থামল…' : 'একটা অটো এসে থামল…');
+  chat('system', FARE.vehicle === 'rick' ? (FARE.rerolls ? 'আরেকজন রিক্সাওয়ালা এগিয়ে এলেন…' : 'রিক্সা স্ট্যান্ড থেকে একজন রিক্সাওয়ালা এগিয়ে এলেন…') : (FARE.rerolls ? 'আরেকটা অটো এসে থামল…' : 'একটা অটো এসে থামল…'));
   chat('driver', d.kind ? fmt(pick(HG.kind), d.ask) : fmt(pick(FARE.rain ? HG.askRain : HG.ask), d.ask) + ' ' + pick(HG.reasons));
   if (d.ask > f[1] + 10) chat('player', pick(HG.playerOvercharge));
-  const sl = $('offer'); sl.value = f[0]; updateOffer();
+  const sl = $('offer'); sl.max = FARE.vehicle === 'rick' ? 160 : 120; sl.value = f[0]; updateOffer();
   setFareButtons(true);
 }
 function openFare() {
@@ -1218,6 +1238,7 @@ $('payBtn').addEventListener('click', () => { const d = FARE.driver; if (!d || d
 $('nextBtn').addEventListener('click', onNextAuto);
 $('rideBtn').addEventListener('click', beginRide);
 $('offer').addEventListener('input', updateOffer);
+$('vehBtns').addEventListener('click', e => { const t = e.target; if (!t || !t.dataset || !t.dataset.v) return; FARE.vehicle = t.dataset.v; Array.from($('vehBtns').children).forEach(c => c.classList.toggle('on', c === t)); });
 $('boardBtns').addEventListener('click', e => { const t = e.target; if (!t || !t.dataset || !t.dataset.b) return; FARE.boarding = t.dataset.b; Array.from($('boardBtns').children).forEach(c => c.classList.toggle('on', c === t)); });
 window.addEventListener('resize', layout); window.addEventListener('orientationchange', () => setTimeout(layout, 200));
 if (typeof ResizeObserver !== 'undefined') new ResizeObserver(layout).observe(cv);

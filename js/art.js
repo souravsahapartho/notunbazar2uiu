@@ -155,6 +155,82 @@ window.ART = function (E) {
         ctx.fillStyle = '#b45309'; ctx.fillRect(cx - w / 2 - 28, B - 20, 22, 6); ctx.fillRect(cx - w / 2 - 24, B - 14, 4, 14); ctx.fillRect(cx - w / 2 - 12, B - 14, 4, 14);
         person(cx + w / 2 + 16, B, .8, { shirt: pickH(SHIRT, i), pants: '#475569', ph: 0, skin: pickH(SKIN, i) });
         break; }
+
+      case 'chajoy': { // modern tea-outlet kiosk (generic look, text sign only)
+        const W2 = 176;
+        ctx.fillStyle = '#fff7ed'; ctx.fillRect(cx - W2 / 2, B - 138, W2, 138);
+        ctx.fillStyle = '#7c2d12'; ctx.fillRect(cx - W2 / 2 - 6, B - 150, W2 + 12, 30);
+        ctx.fillStyle = '#facc15'; ctx.fillRect(cx - W2 / 2 - 6, B - 122, W2 + 12, 4);
+        txt('চা জয়', cx + 14, B - 126, 24, '#fef3c7', 'center', 700);
+        ctx.fillStyle = '#fef3c7'; rr(cx - 62, B - 145, 26, 18, 6); ctx.fill(); ctx.fillStyle = '#7c2d12'; ctx.fillRect(cx - 58, B - 141, 18, 3); // cup glyph
+        ctx.strokeStyle = 'rgba(254,243,199,.8)'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(cx - 54, B - 148); ctx.quadraticCurveTo(cx - 50, B - 154 - Math.sin(t * 3) * 2, cx - 46, B - 148); ctx.stroke();
+        ctx.fillStyle = '#bae6fd'; ctx.fillRect(cx - W2 / 2 + 8, B - 112, 84, 66); // glass front
+        ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.beginPath(); ctx.moveTo(cx - W2 / 2 + 8, B - 112); ctx.lineTo(cx - W2 / 2 + 40, B - 112); ctx.lineTo(cx - W2 / 2 + 8, B - 76); ctx.fill();
+        ctx.fillStyle = '#7c2d12'; ctx.fillRect(cx - W2 / 2 + 8, B - 46, 84, 14); // counter
+        ctx.fillStyle = '#fde68a'; for (let k = 0; k < 4; k++) rr(cx - W2 / 2 + 16 + k * 18, B - 58, 10, 12, 2), ctx.fill();
+        ctx.fillStyle = '#fff'; rr(cx + 6, B - 112, 62, 70, 5); ctx.fill(); // menu board
+        ctx.fillStyle = '#7c2d12'; ctx.fillRect(cx + 6, B - 112, 62, 14); txt('মেনু', cx + 37, B - 101, 11, '#fef3c7', 'center', 700);
+        txt('দুধ চা  ৳২০', cx + 37, B - 84, 10, '#451a03', 'center', 700); txt('মশলা চা ৳২৫', cx + 37, B - 70, 10, '#451a03', 'center', 700); txt('লাল চা  ৳১৫', cx + 37, B - 56, 10, '#451a03', 'center', 700);
+        ctx.fillStyle = '#16a34a'; rr(cx + 74, B - 108, 10, 62, 3); ctx.fill(); ctx.fillStyle = '#fde047'; ctx.fillRect(cx + 74, B - 100, 10, 4);
+        ctx.fillStyle = '#fbbf24'; for (let k = 0; k < 5; k++) circle(cx - W2 / 2 + 22 + k * 32, B - 124 + 3, 2.5); // string lights
+        // outdoor stools + queue
+        ctx.fillStyle = '#b45309'; for (const dx of [-W2 / 2 - 24, W2 / 2 + 26]) { ctx.fillRect(dx + cx - 8, B - 20, 16, 5); ctx.fillRect(dx + cx - 6, B - 15, 3, 15); ctx.fillRect(dx + cx + 3, B - 15, 3, 15); }
+        person(cx - W2 / 2 - 24, B - 2, .8, { shirt: pickH(SHIRT, i), pants: '#334155', ph: 0, skin: pickH(SKIN, i), sit: true });
+        person(cx + W2 / 2 + 34, B, .8, { shirt: '#2563eb', pants: '#475569', ph: t * 2, skin: pickH(SKIN, i + 3), dir: -1 });
+        person(cx + W2 / 2 + 54, B, .8, { shirt: '#db2777', pants: '#1f2937', ph: 0, skin: pickH(SKIN, i + 5), dir: -1 });
+        break; }
+      case 'nagad': { // mobile banking agent: two coloured boards (text only), counter with phones and SIMs
+        shopBody(cx, B, w, h, '#f8fafc'); awning(cx, B, w, '#e11d74', '#f97316', 62);
+        ctx.fillStyle = '#e11d74'; rr(cx - w / 2 + 4, B - h + 4, w / 2 - 6, 26, 5); ctx.fill(); txt('বিকাশ', cx - w / 4, B - h + 23, 15, '#fff', 'center', 700);
+        ctx.fillStyle = '#f97316'; rr(cx + 2, B - h + 4, w / 2 - 6, 26, 5); ctx.fill(); txt('নগদ', cx + w / 4 - 2, B - h + 23, 15, '#fff', 'center', 700);
+        txt(name || 'নগদ-বিকাশ সেন্টার', cx, B - h + 44, 11, '#7c2d12', 'center', 700);
+        txt('ক্যাশ ইন • ক্যাশ আউট • রিচার্জ • রকেট', cx, B - h + 58, 9, '#9d174d', 'center', 700);
+        ctx.fillStyle = '#bae6fd'; ctx.fillRect(cx - w / 2 + 8, B - 46, w - 16, 28);
+        ctx.fillStyle = '#0f172a'; for (let k = 0; k < 6; k++) rr(cx - w / 2 + 14 + k * ((w - 36) / 6), B - 42, 11, 20, 2), ctx.fill();
+        ctx.fillStyle = '#facc15'; for (let k = 0; k < 4; k++) ctx.fillRect(cx - w / 2 + 12 + k * 15, B - 66, 12, 9); // SIM packs
+        ctx.fillStyle = '#7c2d12'; ctx.fillRect(cx - w / 2 + 8, B - 20, w - 16, 20);
+        person(cx + w / 2 - 22, B - 20, .55, { shirt: '#0ea5e9', pants: '#334155', ph: 0, skin: pickH(SKIN, i) });
+        break; }
+      case 'confection': { // confectionery / general store: hanging chips, biscuit jars, fridge
+        shopBody(cx, B, w + 14, h, '#e0f2fe'); awning(cx, B, w + 14, '#2563eb', '#fde047', 62);
+        sign(cx, B - h + 4, w, name || 'রহিম স্টোর', '#1d4ed8', '#fef08a', 15);
+        txt('চা • বিস্কুট • সিগারেট • ঠান্ডা পানীয়', cx, B - h + 44, 9, '#1e3a8a', 'center', 700);
+        ctx.strokeStyle = '#78716c'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(cx - w / 2, B - 74); ctx.lineTo(cx + w / 2, B - 70); ctx.stroke();
+        for (let k = 0; k < 9; k++) { ctx.fillStyle = pickH(['#ef4444', '#facc15', '#22c55e', '#3b82f6', '#fb923c'], i + k); rr(cx - w / 2 + 6 + k * ((w - 12) / 9), B - 72 + k * .4, 10, 16, 2); ctx.fill(); }
+        ctx.fillStyle = '#fef3c7'; for (let k = 0; k < 3; k++) { circle(cx - w / 2 + 18 + k * 20, B - 36, 9); ctx.fillStyle = '#dc2626'; ctx.fillRect(cx - w / 2 + 12 + k * 20, B - 47, 12, 4); ctx.fillStyle = '#fef3c7'; }
+        ctx.fillStyle = '#e5e7eb'; ctx.fillRect(cx + 8, B - 62, 40, 50); ctx.fillStyle = '#7dd3fc'; ctx.fillRect(cx + 11, B - 59, 34, 44);
+        ctx.fillStyle = '#ef4444'; for (let k = 0; k < 4; k++) rr(cx + 15 + k * 8, B - 54, 5, 16, 1), ctx.fill();
+        ctx.fillStyle = '#92400e'; ctx.fillRect(cx - w / 2 + 4, B - 22, w + 6, 22);
+        break; }
+      case 'tong': { // roadside tea tong: bamboo posts, tin roof, bench, kettle, biscuit jars
+        const tw = 118;
+        ctx.fillStyle = '#a16207'; ctx.fillRect(cx - tw / 2, B - 92, 5, 92); ctx.fillRect(cx + tw / 2 - 5, B - 92, 5, 92);
+        ctx.fillStyle = '#9ca3af'; ctx.beginPath(); ctx.moveTo(cx - tw / 2 - 10, B - 90); ctx.lineTo(cx + tw / 2 + 10, B - 90); ctx.lineTo(cx + tw / 2 + 2, B - 108); ctx.lineTo(cx - tw / 2 - 2, B - 108); ctx.fill();
+        ctx.fillStyle = '#6b7280'; for (let k = 0; k < 6; k++) ctx.fillRect(cx - tw / 2 - 4 + k * 21, B - 108, 2, 18);
+        ctx.fillStyle = '#facc15'; rr(cx - 46, B - 132, 92, 20, 4); ctx.fill(); txt(name || 'চা-সিগারেট', cx, B - 117, 13, '#7f1d1d', 'center', 700);
+        ctx.fillStyle = '#b45309'; ctx.fillRect(cx - tw / 2 + 5, B - 44, tw - 10, 8); // counter plank
+        ctx.fillStyle = '#92400e'; ctx.fillRect(cx - tw / 2 + 10, B - 36, 5, 36); ctx.fillRect(cx + tw / 2 - 15, B - 36, 5, 36);
+        ctx.fillStyle = '#d1d5db'; rr(cx - 36, B - 64, 22, 20, 4); ctx.fill(); ctx.fillStyle = '#6b7280'; ctx.fillRect(cx - 16, B - 58, 9, 4); // kettle
+        ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx - 25, B - 66); ctx.bezierCurveTo(cx - 31, B - 76, cx - 19, B - 84, cx - 25, B - 94 - Math.sin(t * 3 + i) * 4); ctx.stroke();
+        ctx.fillStyle = '#fef3c7'; for (let k = 0; k < 3; k++) { rr(cx + 2 + k * 15, B - 62, 11, 18, 3); ctx.fill(); ctx.fillStyle = '#dc2626'; ctx.fillRect(cx + 2 + k * 15, B - 64, 11, 3); ctx.fillStyle = '#fef3c7'; }
+        ctx.fillStyle = '#fde047'; for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.ellipse(cx + 28 + k * 5, B - 84 + k % 2 * 4, 3, 8, .3, 0, 7); ctx.fill(); } // hanging bananas
+        ctx.fillStyle = '#2563eb'; ctx.fillRect(cx - tw / 2 - 28, B - 18, 24, 5); ctx.fillRect(cx - tw / 2 - 25, B - 13, 4, 13); ctx.fillRect(cx - tw / 2 - 11, B - 13, 4, 13); // bench
+        person(cx - tw / 2 - 16, B - 14, .78, { shirt: pickH(SHIRT, i + 1), pants: '#475569', ph: 0, skin: pickH(SKIN, i + 2), sit: true });
+        person(cx + tw / 2 + 14, B, .8, { shirt: pickH(SHIRT, i + 4), pants: '#1f2937', ph: 0, skin: pickH(SKIN, i), dir: -1 });
+        break; }
+      case 'hospital': { // multi-storey private hospital: glass entrance, red-cross board, ambulance
+        const hw = 300, hh = 270;
+        ctx.fillStyle = '#cbd5e1'; ctx.fillRect(cx - hw / 2, B - hh, hw, hh);
+        ctx.fillStyle = '#94a3b8'; ctx.fillRect(cx - hw / 2, B - hh, hw, 12);
+        for (let r = 0; r < 5; r++) for (let c = 0; c < 8; c++) { ctx.fillStyle = hash(r * 9 + c + i) > .3 ? '#bfdbfe' : '#fde68a'; ctx.fillRect(cx - hw / 2 + 16 + c * 34, B - hh + 54 + r * 34, 22, 22); }
+        ctx.fillStyle = '#1d4ed8'; rr(cx - 128, B - hh + 16, 256, 30, 6); ctx.fill(); txt(name || 'হাসপাতাল', cx + 8, B - hh + 38, 20, '#fff', 'center', 700);
+        ctx.fillStyle = '#fff'; rr(cx - 122, B - hh + 20, 24, 22, 4); ctx.fill(); ctx.fillStyle = '#dc2626'; ctx.fillRect(cx - 114, B - hh + 22, 8, 18); ctx.fillRect(cx - 119, B - hh + 27, 18, 8);
+        ctx.fillStyle = '#e2e8f0'; ctx.fillRect(cx - 50, B - 70, 100, 70); ctx.fillStyle = '#7dd3fc'; ctx.fillRect(cx - 42, B - 62, 40, 62); ctx.fillRect(cx + 2, B - 62, 40, 62);
+        ctx.fillStyle = '#dc2626'; ctx.fillRect(cx - 58, B - 84, 116, 14); txt('জরুরি বিভাগ ২৪/৭', cx, B - 73, 10, '#fff', 'center', 700);
+        ctx.fillStyle = '#fff'; rr(cx + 108, B - 52, 78, 40, 6); ctx.fill(); ctx.fillStyle = '#dc2626'; ctx.fillRect(cx + 108, B - 34, 78, 5); ctx.fillRect(cx + 140, B - 48, 6, 18); ctx.fillRect(cx + 134, B - 42, 18, 6);
+        ctx.fillStyle = '#111'; circle(cx + 124, B - 12, 8); circle(cx + 172, B - 12, 8);
+        ctx.fillStyle = (Math.floor(t * 3) % 2) ? '#ef4444' : '#3b82f6'; ctx.fillRect(cx + 140, B - 58, 14, 6);
+        break; }
       case 'chop': { // fritter / singara shop with kadai
         shopBody(cx, B, w, h, '#fde68a'); awning(cx, B, w, '#ea580c', '#fff', 64);
         sign(cx, B - h + 4, w - 14, name || 'চপ-সিঙ্গারা', '#b91c1c', '#fef08a', 14);
