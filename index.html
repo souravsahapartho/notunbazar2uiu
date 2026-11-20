@@ -2,7 +2,15 @@
 <html lang="bn">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#1e1b4b">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="টেসলা মামা">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
 <title>টেসলা মামা: সিট ধরে রাখো! | নতুন বাজার → UIU</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -47,9 +55,10 @@
         <div class="chkrow">
           <label class="chk"><input type="checkbox" id="voiceChk" checked> 🔊 বাংলা ভয়েস</label>
           <label class="chk"><input type="checkbox" id="subsChk" checked> 💬 সাবটাইটেল</label>
+          <label class="chk"><input type="checkbox" id="abuseChk" checked> 🤬 রাস্তার গালি</label>
         </div>
         <div id="voiceNote" class="note"></div>
-        <div class="row"><button id="startBtn" class="big">রিক্সা ডাকো 🛺</button><button id="tutBtn" class="alt">❓ কীভাবে খেলব</button></div>
+        <div class="row stickyRow"><button id="startBtn" class="big">রিক্সা ডাকো 🛺</button><button id="tutBtn" class="alt">❓ কীভাবে খেলব</button></div>
         <div class="note" id="bestNote"></div>
       </div>
     </div>

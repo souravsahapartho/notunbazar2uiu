@@ -127,3 +127,16 @@ body:not(.riding) #touch{display:none!important}
   #menu,#tut{position:fixed;inset:0;align-items:flex-start;overflow:auto;padding:10px}
   #menu .card,#tut .card{margin:auto;max-height:none}
 }
+
+/* ---- touch / iOS / safe-area polish ---- */
+html,body{-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;overscroll-behavior:none;-webkit-text-size-adjust:100%}
+button,.chk{-webkit-user-select:none;user-select:none}
+#touch{padding-left:max(10px,env(safe-area-inset-left));padding-right:max(10px,env(safe-area-inset-right));padding-bottom:max(10px,env(safe-area-inset-bottom))}
+#touch button{min-width:64px;min-height:64px;transition:transform .06s,filter .06s}
+#touch button.down{transform:scale(.93);filter:brightness(1.35)}
+@media (orientation:landscape) and (max-height:520px){
+  #touch{padding-left:max(14px,env(safe-area-inset-left));padding-right:max(14px,env(safe-area-inset-right));padding-bottom:max(10px,env(safe-area-inset-bottom))}
+  #fare .card button{padding:7px 10px;font-size:13px;min-height:40px}
+}
+.stickyRow{position:sticky;bottom:0;padding:8px 0;background:linear-gradient(0deg,rgba(30,27,75,.97) 70%,transparent);z-index:3}
+#fare,#menu,#tut,#rot{padding-left:max(0px,env(safe-area-inset-left));padding-right:max(0px,env(safe-area-inset-right))}

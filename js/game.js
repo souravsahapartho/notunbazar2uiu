@@ -89,7 +89,7 @@ const A = window.ART({ ctx, rr, txt, hash, mod, time: () => (S ? S.t : 0) });
 const isTouch = () => (window.matchMedia && matchMedia('(pointer:coarse)').matches) || ('ontouchstart' in window);
 
 /* ---------- audio (synthesised; nothing downloaded) ---------- */
-const settings = { voice: true, mute: false, subs: true };
+const settings = { voice: true, mute: false, subs: true, abuse: true };
 let AC = null, eng = null, engG = null;
 function audioInit() {
   if (AC) { if (AC.state === 'suspended') AC.resume(); return; }
@@ -166,9 +166,30 @@ function canSpeak(key) {
   const gap = key === 'player' ? 16 : key === 'driver' ? 10 : 7, n = nowS();
   return n - (lastSpoke[key] === undefined ? -99 : lastSpoke[key]) > gap && n - lastAny > 3.2;
 }
+// optional pre-recorded voice pack (audio/manifest.json, built by tools/gen_voices.py from a realistic Bangla TTS)
+const PACK = { map: {} };
+if (typeof fetch === 'function') fetch('audio/manifest.json').then(r => r.ok ? r.json() : {}).then(m => { PACK.map = m || {}; }).catch(() => {});
+function fnv(str) {
+  const b = new TextEncoder().encode(str); let h = 0x811c9dc5;
+  for (const x of b) { h ^= x; h = Math.imul(h, 0x01000193) >>> 0; }
+  return h.toString(16).padStart(8, '0');
+}
+const packKey = key => key === 'player' ? 'player_' + FARE.gender : key;
+function playPack(text, key, cb) {
+  if (typeof Audio === 'undefined' || typeof TextEncoder === 'undefined') return false;
+  const f = PACK.map[fnv(packKey(key) + '|' + text)]; if (!f) return false;
+  try {
+    if (PACK.cur) PACK.cur.pause();
+    const a = new Audio('audio/' + f); PACK.cur = a; a.onended = a.onerror = () => { if (cb) cb(); };
+    const pr = a.play(); if (pr && pr.catch) pr.catch(() => { if (cb) cb(); });
+    return true;
+  } catch (e) { return false; }
+}
 function speak(text, key, force, cb) {
-  if (!settings.voice || settings.mute || !bnVoices.length || !('speechSynthesis' in window)) return false;
+  if (!settings.voice || settings.mute) return false;
   if (!force && (speaking >= 2 || !canSpeak(key))) return false;
+  if (playPack(text, key, cb)) { lastSpoke[key] = lastAny = nowS(); return true; }
+  if (!bnVoices.length || !('speechSynthesis' in window)) return false;
   const prof = profOf(key), v = voiceFor(prof.g);
   const u = new SpeechSynthesisUtterance(text);
   u.voice = v; u.lang = v.lang; u.pitch = prof.p; u.rate = prof.r;
@@ -243,7 +264,7 @@ function startGame() { // menu -> haggle screen
   audioInit();
   FARE.name = ($('nameInput').value || '').trim() || 'বন্ধু';
   store.set('tm_name', FARE.name);
-  settings.voice = $('voiceChk').checked; settings.subs = $('subsChk').checked; subsTouched = true;
+  settings.voice = $('voiceChk').checked; settings.subs = $('subsChk').checked; subsTouched = true; settings.abuse = $('abuseChk').checked;
   FARE.weather = $('weatherSel').value;
   goFullscreen();
   if (!store.get('tm_tut')) showTutorial(openFare); else openFare();
@@ -272,7 +293,8 @@ function die(cause) {
   if (S.mode !== 'play') return;
   S.mode = 'dying'; S.deathT = 0; S.cause = cause; S.deathStage = S.stageIdx;
   S.flash = 1; S.flashCol = '#ef4444'; sfx.die();
-  say('player', pick(L.nearFall), { speak: true, force: true, life: 1.8 });
+  say('player', pick(L.dying), { speak: true, force: true, life: 2.8 });
+  later(1.1, () => say('driver', pick(L.dyingDriver), { speak: true, force: true, life: 1.8 }));
 }
 function win() {
   if (S.mode !== 'play') return;
@@ -307,6 +329,7 @@ function placeOf(i) { return i === 5 ? 'শেষ টেবিলের ইউ-�
 function update(dt) {
   S.t += dt; S.clock += dt; S.hint -= dt;
   const prog = clamp(S.dist / FINISH, 0, 1);
+  if (S.life < 25 && !S.lowWarned) { S.lowWarned = true; say('player', pick(L.dyingWarn), { speak: true, force: true, life: 2.2 }); }
   S.honkCool -= dt; S.warnCool -= dt; S.recover -= dt; S.nearT -= dt;
 
   // delayed callbacks
@@ -465,11 +488,11 @@ function spawnPed(x) {
 function hitPed(p) {
   p.hit = true; p.fall = 0; S.hits++; S.life -= 8; S.score -= 100; S.speed = Math.min(S.speed, 8);
   jolt(1.8); sfx.thud(); S.flash = .5; S.flashCol = '#f59e0b';
-  say('ped', pick(L.pedHit), { ref: p, force: true, life: 2.4 });
+  say('ped', pick(settings.abuse && Math.random() < .5 ? L.abuse : L.pedHit), { ref: p, force: true, life: 2.4 });
   if (!S.mob) {
     S.mob = { x: S.dist - 4.5, v: 11, t: 0, n: 8, caught: false };
     S.banner = { text: '🏃 জনতা তাড়া করছে!', sub: 'থেমো না! ধীরে চালাতে বোলো না!', t: 0 };
-    later(.9, () => say('crowd', pick(L.mob), { force: true, life: 2.6 }));
+    later(.9, () => say('crowd', pick(settings.abuse && Math.random() < .5 ? L.mobRude : L.mob), { force: true, life: 2.6 }));
     later(2.2, () => { if (S.mob && S.mode === 'play') say('player', pick(L.mobRun), { life: 1.8 }); });
   }
 }
@@ -540,7 +563,7 @@ function collide(v) {
   S.hits++; S.life -= 7; S.score -= 50;
   S.speed = Math.min(S.speed, 4);
   jolt(2.3); S.shake = 10; S.flash = .5; S.flashCol = '#f59e0b'; sfx.thud();
-  say('other', pick(L.carYell), { ref: v, speak: true, force: true, life: 2.6 });
+  say('other', pick(settings.abuse && Math.random() < .6 ? L.abuse : L.carYell), { ref: v, speak: true, force: true, life: 2.6 });
   later(1.3, () => {
     if (S.mode !== 'play') return;
     if (v.type === 'rick') say('other', pick(L.rickApology), { ref: v, speak: true, life: 2.2 });
@@ -825,7 +848,7 @@ function drawAuto() {
   ctx.save();
   const wy = S.wrong ? -Math.sin(Math.PI * S.wrong.t / S.wrong.dur) * 46 : 0;
   ctx.translate(S.camX, GY + S.bobY + wy);
-  ctx.rotate(S.tilt * S.face);
+  ctx.rotate(S.tilt * S.face + (S.mode === 'dying' ? -.3 * clamp(S.deathT / .8, 0, 1) : 0));
   ctx.scale(S.face * S.turnSx, 1);
   const wa = S.wheel;
   ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(0, 4 - S.bobY, 90, 8, 0, 0, 7); ctx.fill();
@@ -847,7 +870,8 @@ function drawAuto() {
   ctx.fillStyle = '#d6a77a'; ctx.beginPath(); ctx.arc(34, -92, 4, 0, 7); ctx.fill();
   }
   // passenger
-  const th = S.a * .6, hipx = -38, hipy = -72;
+  const dying = S.mode === 'dying', du = dying ? clamp(S.deathT / 1.3, 0, 1) : 0;
+  const th = S.a * .6 + du * 5.5, hipx = -38 - du * 150, hipy = Math.min(-8, -72 - du * 150 + du * du * 230);
   ctx.save(); ctx.translate(hipx, hipy); ctx.rotate(th);
   const fem = S.gender === 'f';
   ctx.fillStyle = fem ? '#ec4899' : '#3b82f6'; rr(-10, -40, 20, 40, 5); ctx.fill();
@@ -864,7 +888,7 @@ function drawAuto() {
   const shx = hipx + 32 * Math.sin(th), shy = hipy - 32 * Math.cos(th);
   const rail = [-14, -101];
   ctx.lineCap = 'round';
-  for (let k = 0; k < 2; k++) {
+  for (let k = 0; k < (dying ? 0 : 2); k++) {
     const hx = S.gripping ? rail[0] + k * 14 : shx + 16 + Math.sin(S.t * 9 + k * 2) * 12 + k * 8;
     const hy = S.gripping ? rail[1] : shy - 6 + Math.cos(S.t * 11 + k) * 14;
     ctx.strokeStyle = '#e0b48a'; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(shx, shy); ctx.quadraticCurveTo((shx + hx) / 2 + 8, (shy + hy) / 2 - 6, hx, hy); ctx.stroke();
@@ -1051,6 +1075,7 @@ function render() {
   ctx.save();
   if (S.mode === 'dead') { drawDeathScene(); ctx.restore(); return; }
   if (S.shake > 0) ctx.translate((Math.random() - .5) * S.shake, (Math.random() - .5) * S.shake);
+  if (S.mode === 'stand' && standLift) { ctx.translate(0, -standLift); ctx.fillStyle = '#374151'; ctx.fillRect(0, H - 2, W, standLift + 4); }
   drawScene();
   if (S.mode === 'play' || S.mode === 'dying' || S.mode === 'win') { drawBubbles(); drawHUD(); }
   if (S.mode === 'stand') drawBubbles();
@@ -1085,7 +1110,8 @@ function frame(now) {
   else if (S.mode === 'dying') {
     S.deathT += dt; S.t += dt; S.flash = Math.max(0, S.flash - 1.5 * dt); S.shake = Math.max(0, S.shake - 25 * dt);
     S.speed *= Math.exp(-3 * dt); S.dist += S.speed * dt;
-    if (S.deathT > 1.5) { S.mode = 'dead'; S.deathT = 0; finishUi(false); }
+    S.pend.forEach(q => q.t -= dt); for (let i = S.pend.length - 1; i >= 0; i--) if (S.pend[i].t <= 0) { const f = S.pend[i].fn; S.pend.splice(i, 1); f(); }
+    if (S.deathT > 2.8) { S.mode = 'dead'; S.deathT = 0; finishUi(false); }
   } else if (S.mode === 'dead') { S.deathT += dt; S.t += dt; }
   else if (S.mode === 'win') {
     S.t += dt; S.speed *= Math.exp(-1.2 * dt); S.dist += S.speed * dt; S.wheel += S.speed * dt * PPM / 19;
@@ -1193,8 +1219,20 @@ function openFare() {
   const sl = $('offer'); sl.max = 120; sl.value = Math.max(10, fairOf(b, FARE.rain)[0]); updateOffer();
   showFareInfo(); setFareButtons();
 }
+let standLift = 0;
+function calcLift() {
+  standLift = 0;
+  if (typeof document.querySelector !== 'function') return;
+  const card = document.querySelector('#fare .card'); if (!card || !cv.getBoundingClientRect) return;
+  const cr = cv.getBoundingClientRect(), br = card.getBoundingClientRect();
+  if (!cr.height || !br.height) return;
+  const k = H / cr.height, topL = (br.top - cr.top) * k, rightL = (br.right - cr.left) * k;
+  if (br.top >= cr.bottom - 2 || rightL < 440) return;
+  standLift = clamp(536 - topL, 0, 240);
+}
 function standTick(dt) {
   S.t += dt; S.clock += dt; S.speed = 0;
+  S.liftT = (S.liftT || 0) - dt; if (S.liftT <= 0) { S.liftT = .4; calcLift(); }
   runPend(dt);
   S.bubbles.forEach(b => b.t += dt); S.bubbles = S.bubbles.filter(b => b.t < b.life);
   const st = S.stand; if (!st) return;
@@ -1250,7 +1288,7 @@ function driverLeaves() {
   if (FARE.idx >= MAX_DRIVERS - 1) { // nobody else around: he calls you back
     d.gone = false; d.final = true; d.ask = d.min;
     seq([['driver', fmt(pick(HG.last), d.min)]]);
-  } else seq([['driver', pick(HG.refuse)]]);
+  } else seq([['driver', pick(settings.abuse && Math.random() < .5 ? HG.refuseRude : HG.refuse)]]);
 }
 function onOffer() {
   const d = FARE.driver; if (!d || d.gone || FARE.deal || FARE.busy) return;
@@ -1359,12 +1397,14 @@ window.addEventListener('keyup', e => setKey(e, false));
 window.addEventListener('blur', () => { inp.grip = inp.left = inp.right = inp.slow = false; });
 function hold(id, key) {
   const el = $(id); if (!el) return;
-  const on = e => { e.preventDefault(); inp[key] = true; audioInit(); };
-  const off = e => { e.preventDefault(); inp[key] = false; };
+  const on = e => { e.preventDefault(); inp[key] = true; audioInit(); el.classList.add('down'); try { el.setPointerCapture(e.pointerId); } catch (x) { /* ignore */ } if (navigator.vibrate) navigator.vibrate(8); };
+  const off = e => { e.preventDefault(); inp[key] = false; el.classList.remove('down'); };
   el.addEventListener('pointerdown', on); el.addEventListener('pointerup', off);
-  el.addEventListener('pointercancel', off); el.addEventListener('pointerleave', off);
+  el.addEventListener('pointercancel', off); el.addEventListener('lostpointercapture', off);
   el.addEventListener('contextmenu', e => e.preventDefault());
 }
+if (document.addEventListener) ['gesturestart', 'gesturechange', 'dblclick'].forEach(ev => document.addEventListener(ev, e => e.preventDefault()));
+if (document.documentElement && !document.documentElement.requestFullscreen && $('fsBtn') && $('fsBtn').classList) $('fsBtn').classList.add('hidden');
 hold('bG', 'grip'); hold('bL', 'left'); hold('bR', 'right'); hold('bS', 'slow');
 $('startBtn').addEventListener('click', startGame);
 $('retryBtn').addEventListener('click', openFare);
