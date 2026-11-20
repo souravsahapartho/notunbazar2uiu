@@ -12,14 +12,16 @@ A funny, fast, fully responsive browser game about the bumpy battery auto-ricksh
 - 🗣️ **Spoken fare haggling.** Walk up to a jumble of rickshaws, talk to the front driver, and bargain with buttons. Or skip the haggling. Boarding points: Natun Bazar, Family Bazar, Sayed Nagar, 10 Tola.
 - 🎮 **Three control modes**, chosen in the menu:
   - **Manual:** buttons or keyboard.
-  - **Tilt (ফোন হেলানো):** tilt the phone to lean. Tip the top edge toward you to grip and push it away to slow down.
+  - **Tilt (ফোন হেলানো):** hold the phone like a steering wheel and turn it left/right to lean (works in any orientation). Tip the top edge toward you to grip and push it away to slow down. 🎯 recalibrates.
   - **Auto balance:** the game balances for you. Easiest, and the default on phones.
 - ➡️ **Lean cue.** An on-screen arrow shows which way to lean back.
 - 🔥 **Calm-ride combo** from x1 to x5, plus a ছেলে/মেয়ে choice with matching voices.
 - 💥 **Hard-crash drama:** a dying scream and a UIU mourning notice (শোকবার্তা and দোয়া প্রার্থনা) at the finish.
 - 🏙️ **A detailed Dhaka street.** Every shop has its own name (হাজি / নয়ন / মা বিরিয়ানি, আলকারিম রেস্টুরেন্ট, ফার্মেসি, টেলিকম with বিকাশ and নগদ boards), plus the Cha Joy outlet, the স্বপ্ন outlet, Last Pharma, the Porajoy hospital, tea tongs, hawker clothes vans and street life.
 - 📍 **Landmarks:** the Bitumen Gate boulevard, the Chef's Table food court, Masjid Al Mustafa with the road to UIU, and the UIU campus gate.
-- 🚌 **UIU shuttle buses** share the road, along with rickshaws, CNGs and cars.
+- 🚌 **Traffic:** city buses in assorted colours, with roughly 1 bus in 10 being an orange **UIU shuttle**, plus rickshaws, CNGs and cars.
+- 🎥 **U-turn camera:** the camera swings round to a rear view of the rickshaw, then shows the opposite side of the road (different shops).
+- 🛣️ **Real junctions:** Bitumen Gate's boulevard and the road to UIU (left of Masjid Al Mustafa) branch off with curved kerbs, a zebra crossing, lamps and flanking buildings.
 - 🤬 **Street abuse lines** (mild Dhaka style), toggleable in the menu.
 - 📱 **Responsive on every screen.** It is tested on Pixel, iPhone, iPad and desktop sizes in portrait and landscape, with safe-area insets, a rotate prompt and fullscreen. On iPhone, use Add to Home Screen for fullscreen.
 

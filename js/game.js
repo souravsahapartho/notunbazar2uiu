@@ -207,15 +207,20 @@ const inp = { grip: false, left: false, right: false, slow: false };
 const CTRL = { mode: 'manual', invert: false, lean: 0, pitch: 0, base: null, live: false, ok: false };
 function screenAngle() { return (screen.orientation && typeof screen.orientation.angle === 'number') ? screen.orientation.angle : (typeof window.orientation === 'number' ? window.orientation : 0); }
 function onTilt(e) {
-  if (e.beta == null && e.gamma == null) return;
-  const a = screenAngle(), b = e.beta || 0, g = e.gamma || 0;
-  let side, fwd; // side = roll about screen's vertical axis, fwd = tip top edge toward you
-  if (a === 90) { side = -b; fwd = g; } else if (a === 270 || a === -90) { side = b; fwd = -g; } else if (a === 180) { side = -g; fwd = -b; } else { side = g; fwd = b; }
-  if (!CTRL.base) CTRL.base = { side, fwd };
+  if (e.beta == null || e.gamma == null) return;
+  const D = Math.PI / 180, b = e.beta * D, g = e.gamma * D;
+  // gravity vector in device coordinates (exact for any beta/gamma), then rotated into screen coordinates
+  const gx = Math.sin(g) * Math.cos(b), gy = -Math.sin(b), gz = -Math.cos(g) * Math.cos(b);
+  const a = screenAngle(); let sx, sy;
+  if (a === 90) { sx = -gy; sy = gx; } else if (a === 270 || a === -90) { sx = gy; sy = -gx; } else if (a === 180) { sx = -gx; sy = -gy; } else { sx = gx; sy = gy; }
+  if (Math.hypot(sx, sy) < .2) return; // phone lying flat: wheel angle undefined
+  const roll = Math.atan2(sx, -sy) / D;   // + = phone turned clockwise like a steering wheel (right side down)
+  const pitch = Math.atan2(gz, -sy) / D;  // + = top edge toward you
+  if (!CTRL.base) CTRL.base = { roll, pitch };
   CTRL.ok = true;
-  const dz = v => Math.abs(v) < 2 ? 0 : v - Math.sign(v) * 2; // 2° dead-zone
-  CTRL.lean = CTRL.lean * .6 + .4 * clamp(dz(side - CTRL.base.side) / 16, -1, 1) * (CTRL.invert ? -1 : 1);
-  CTRL.pitch = CTRL.pitch * .6 + .4 * clamp(dz(fwd - CTRL.base.fwd) / 16, -1, 1);
+  const dz = v => Math.abs(v) < 2.5 ? 0 : v - Math.sign(v) * 2.5;
+  CTRL.lean = CTRL.lean * .55 + .45 * clamp(dz(roll - CTRL.base.roll) / 20, -1, 1) * (CTRL.invert ? -1 : 1);
+  CTRL.pitch = CTRL.pitch * .55 + .45 * clamp(dz(pitch - CTRL.base.pitch) / 16, -1, 1);
 }
 function calibrateTilt() { CTRL.base = null; }
 function applyCtrlClass() { const c = document.body.classList; ['manual', 'tilt', 'auto'].forEach(m => c.toggle('c-' + m, CTRL.mode === m)); if (CTRL.mode !== 'tilt') c.remove('tiltfail'); }
@@ -243,7 +248,7 @@ function newState() {
     mode: 'menu', t: 0, clock: 0, dist: 0, speed: 0, life: 100, stamina: 100,
     gripping: false, gripLocked: false, a: 0, va: 0, score: 0, honks: 0, falls: 0, hits: 0, goodGrips: 0,
     objs: [], vehs: [], parts: [], bubbles: [], pend: [], banner: null,
-    shake: 0, bobY: 0, bobV: 0, tilt: 0, turnSx: 1, face: 1, dir: 1, camX: 300,
+    shake: 0, bobY: 0, bobV: 0, tilt: 0, turnSx: 1, face: 1, dir: 1, side: 0, camX: 300,
     nextRoadX: 30, nextVehX: 75, honkCool: 0, warnCool: 0, recover: 0, idleT: 4, nearT: 0,
     stageIdx: 0, uturn: { state: 0, t: 0, sign: 1, flipped: false }, flash: 0, flashCol: '#fff',
     wheel: 0, rain: false, deal: null, mood: 'ok', peds: [], mob: null, onc: [], wrong: null, nextPedX: 60, nextOncT: 1, amb: {}, stopT: 0, jams: {}, jamDone: {}, deathT: 0, cause: '', name: '', hint: 9, confetti: []
@@ -408,10 +413,10 @@ function update(dt) {
   }
   if (u.state === 1) {
     u.t += dt; const p = clamp(u.t / UTURN_DUR, 0, 1);
-    S.turnSx = Math.max(.08, Math.abs(Math.cos(Math.PI * p)));
-    S.face = p < .5 ? 1 : -1;
-    if (p >= .5 && !u.flipped) { u.flipped = true; S.dir = -1; S.camX = 660; S.flash = 1; S.flashCol = '#fff'; }
-    if (p >= 1) { u.state = 2; S.turnSx = 1; S.face = -1; S.score += 100; }
+    S.turnSx = Math.max(.06, Math.abs(Math.cos(Math.PI * p)));   // side view -> rear view -> side view
+    S.face = 1;
+    if (p >= .5 && !u.flipped) { u.flipped = true; S.side = 1; S.flash = 1; S.flashCol = '#fff'; S.banner = { text: '🎥 উল্টো ফুটপাত', sub: 'ক্যামেরা ঘুরে রাস্তার ওপাশ দেখাচ্ছে', t: .8 }; }
+    if (p >= 1) { u.state = 2; S.turnSx = 1; S.score += 100; }
   }
 
   // grip & stamina
@@ -708,17 +713,18 @@ const KINDS = [
 ];
 function drawRoadside() {
   const lo = Math.floor((S.dist - 30) / 5), hi = Math.ceil((S.dist + 30) / 5);
+  const so = S.side ? 4000 : 0; // after the U-turn we see the opposite pavement: different shops
   for (let i = lo; i <= hi; i++) {
     const wx = i * 5 + hash(i) * 1.5;
-    if (LM.some(l => Math.abs(wx - l) < 11) || NAMED.some(n => Math.abs(wx - n.x) < 11)) continue;
-    const cx = X(wx), k = hash(i * 3.3), st = stageOf(wx);
+    if (LM.some(l => Math.abs(wx - l) < 11) || (!S.side && NAMED.some(n => Math.abs(wx - n.x) < 11))) continue;
+    const cx = X(wx), k = hash((i + so) * 3.3), st = stageOf(wx);
     if (cx < -220 || cx > W + 220) continue;
-    if (k < .66) { const arr = KINDS[st]; A.shop(cx, SIDEY, arr[Math.floor(hash(i * 7.7) * arr.length)], i); }
+    if (k < .66) { const arr = KINDS[st]; A.shop(cx, SIDEY, arr[Math.floor(hash((i + so) * 7.7) * arr.length)], i + so); }
     else if (k < .8) A.tree(cx, SIDEY, i, hash(i * 2.2) > .5);
     else if (k < .9) A.pole(cx, SIDEY);
     else A.billboard(cx, SIDEY, i, BOARDS[Math.floor(hash(i * 4.4) * BOARDS.length)]);
   }
-  for (const n of NAMED) { const cx = X(n.x); if (cx > -220 && cx < W + 220) A.shop(cx, SIDEY, n.kind, n.x, n.name); }
+  for (const n of NAMED) { if (S.side && n.x < UTURN_AT) continue; const cx = X(n.x); if (cx > -220 && cx < W + 220) A.shop(cx, SIDEY, n.kind, n.x, n.name); }
 }
 function drawStreetLife() {
   const f0 = Math.floor((S.dist - 30) / 3), f1 = Math.ceil((S.dist + 30) / 3);
@@ -868,15 +874,25 @@ function drawVeh(v, o) {
     ctx.fillStyle = '#bfe6ff'; ctx.beginPath(); ctx.moveTo(-hw * .45, -54); ctx.lineTo(-hw * .27, -76); ctx.lineTo(hw * .3, -76); ctx.lineTo(hw * .5, -54); ctx.fill();
     ctx.fillStyle = '#fde68a'; ctx.fillRect(hw - 8, -44, 8, 8);
     wheel(-hw * .6, -16, 16, wa); wheel(hw * .6, -16, 16, wa);
-  } else if (v.type === 'bus') { // UIU shuttle bus: white AC coach, UIU blue/red livery
-    ctx.fillStyle = '#f8fafc'; rr(-hw, -112, hw * 2, 96, 10); ctx.fill();
-    ctx.fillStyle = '#0369a1'; ctx.fillRect(-hw, -58, hw * 2, 26);
-    ctx.fillStyle = '#e11d48'; ctx.fillRect(-hw, -62, hw * 2, 5); ctx.fillRect(-hw, -32, hw * 2, 4);
-    ctx.fillStyle = '#0c4a6e'; for (let k = 0; k < 8; k++) ctx.fillRect(-hw + 14 + k * ((hw * 2 - 70) / 8), -104, ((hw * 2 - 70) / 8) - 8, 34);
-    ctx.fillStyle = 'rgba(125,211,252,.55)'; for (let k = 0; k < 8; k++) ctx.fillRect(-hw + 14 + k * ((hw * 2 - 70) / 8), -104, ((hw * 2 - 70) / 8) - 8, 12);
-    ctx.fillStyle = '#0c4a6e'; ctx.fillRect(hw - 44, -104, 36, 42); ctx.fillStyle = 'rgba(125,211,252,.55)'; ctx.fillRect(hw - 44, -104, 36, 14);
-    txt('UIU SHUTTLE', -hw / 2 - 6, -40, 15, '#fff', 'center', 700);
-    txt('ইউআইইউ শাটল • AC', -hw / 2 - 6, -25, 9, '#fde68a', 'center', 700);
+  } else if (v.type === 'bus') {
+    if (v.shuttle === undefined) v.shuttle = Math.random() < .1;   // only about 1 bus in 10 is a UIU shuttle
+    const win = (k) => -hw + 14 + k * ((hw * 2 - 70) / 8), ww = ((hw * 2 - 70) / 8) - 8;
+    if (v.shuttle) { // orange UIU shuttle coach
+      ctx.fillStyle = '#f97316'; rr(-hw, -112, hw * 2, 96, 10); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.fillRect(-hw, -60, hw * 2, 7); ctx.fillStyle = '#0369a1'; ctx.fillRect(-hw, -53, hw * 2, 3);
+      ctx.fillStyle = '#0c4a6e'; for (let k = 0; k < 8; k++) ctx.fillRect(win(k), -104, ww, 34);
+      ctx.fillStyle = 'rgba(125,211,252,.55)'; for (let k = 0; k < 8; k++) ctx.fillRect(win(k), -104, ww, 12);
+      ctx.fillStyle = '#0c4a6e'; ctx.fillRect(hw - 44, -104, 36, 42);
+      txt('UIU SHUTTLE', -hw / 2 - 6, -34, 15, '#fff', 'center', 700);
+      txt('ইউআইইউ শাটল • AC', -hw / 2 - 6, -20, 9, '#fff7ed', 'center', 700);
+    } else { // ordinary city bus (never orange)
+      const c = (v.col === '#f97316' || v.col === '#eab308') ? '#3b82f6' : v.col;
+      ctx.fillStyle = c; rr(-hw, -112, hw * 2, 96, 10); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.fillRect(-hw, -62, hw * 2, 8);
+      ctx.fillStyle = '#bfe6ff'; for (let k = 0; k < 8; k++) ctx.fillRect(win(k), -102, ww, 32);
+      ctx.fillStyle = '#bfe6ff'; ctx.fillRect(hw - 44, -102, 36, 40);
+      txt('বাস সার্ভিস', -hw / 2, -32, 15, '#fff', 'center', 700);
+    }
     ctx.fillStyle = '#fde68a'; ctx.fillRect(hw - 8, -44, 8, 8);
     wheel(-hw * .65, -18, 20, wa); wheel(hw * .6, -18, 20, wa);
   } else if (v.type === 'rick') {
@@ -895,15 +911,41 @@ function drawAutoBody(sc, col, hw, wa) {
   ctx.restore();
 }
 
+/* the rickshaw seen from behind (mid U-turn) */
+function drawRickRear() {
+  const fem = S.gender === 'f';
+  ctx.save(); ctx.scale(1.12, 1.12);
+  ctx.fillStyle = '#111'; rr(-44, -36, 14, 36, 5); ctx.fill(); rr(30, -36, 14, 36, 5); ctx.fill();
+  ctx.fillStyle = '#16a34a'; rr(-40, -86, 80, 60, 10); ctx.fill();
+  ctx.fillStyle = '#facc15'; ctx.fillRect(-40, -54, 80, 6); ctx.fillStyle = '#ef4444'; ctx.fillRect(-40, -48, 80, 3);
+  ctx.fillStyle = '#f472b6'; for (let k = 0; k < 5; k++) { ctx.beginPath(); ctx.arc(Math.cos(k * 1.256) * 7, -70 + Math.sin(k * 1.256) * 7, 5, 0, 7); ctx.fill(); }
+  ctx.fillStyle = '#fde047'; ctx.beginPath(); ctx.arc(0, -70, 4, 0, 7); ctx.fill();
+  ctx.fillStyle = '#fff'; rr(-19, -40, 38, 11, 3); ctx.fill(); txt('টেসলা', 0, -31, 8, '#166534', 'center', 700);
+  ctx.fillStyle = '#ef4444'; ctx.fillRect(-38, -66, 6, 9); ctx.fillRect(32, -66, 6, 9);
+  // driver (right) and passenger (left) seen from behind
+  ctx.fillStyle = '#f1e4c8'; rr(6, -108, 22, 28, 6); ctx.fill(); ctx.fillStyle = '#d6a77a'; ctx.beginPath(); ctx.arc(17, -116, 9, 0, 7); ctx.fill(); ctx.fillStyle = '#e5e7eb'; ctx.beginPath(); ctx.arc(17, -120, 9, Math.PI, 0); ctx.fill();
+  ctx.save(); ctx.translate(-20, -86); ctx.rotate(S.a * .6);
+  ctx.fillStyle = fem ? '#ec4899' : '#3b82f6'; rr(-11, -30, 22, 30, 6); ctx.fill();
+  if (fem) { ctx.fillStyle = '#111'; ctx.fillRect(-9, -30, 18, 34); }
+  ctx.fillStyle = '#e0b48a'; ctx.beginPath(); ctx.arc(0, -38, 10, 0, 7); ctx.fill(); ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(0, -38, 10, 0, 7); ctx.fill();
+  ctx.restore();
+  ctx.fillStyle = '#14532d'; ctx.fillRect(-38, -134, 3, 50); ctx.fillRect(35, -134, 3, 50);
+  ctx.fillStyle = '#15803d'; rr(-50, -142, 100, 14, 7); ctx.fill();
+  ctx.fillStyle = '#facc15'; for (let k = 0; k < 8; k++) ctx.fillRect(-46 + k * 12.6, -128, 3, 6);
+  ctx.restore();
+}
+
 /* the player's auto */
 function drawAuto() {
   ctx.save();
   const wy = S.wrong ? -Math.sin(Math.PI * S.wrong.t / S.wrong.dur) * 46 : 0;
   ctx.translate(S.camX, GY + S.bobY + wy);
   ctx.rotate(S.tilt * S.face + (S.mode === 'dying' ? -.3 * clamp(S.deathT / .8, 0, 1) : 0));
-  ctx.scale(S.face * S.turnSx, 1);
+  const rear = S.uturn.state === 1 && S.turnSx < .45;
+  ctx.scale(S.face * (rear ? 1 : S.turnSx), 1);
   const wa = S.wheel;
-  ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(0, 4 - S.bobY, 90, 8, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(0, 4 - S.bobY, rear ? 56 : 90, 8, 0, 0, 7); ctx.fill();
+  if (rear) { drawRickRear(); ctx.restore(); return; }
   const rick = true;
   A.rickshaw(0, 0, 1.12, { col: '#16a34a', seed: 12, t: S.t, wa: wa, puller: true, cap: '#e5e7eb', lungi: '#2563eb', shirt: '#f1e4c8', plate: 'টেসলা' });
   if (!rick) {
@@ -1434,7 +1476,10 @@ function layout() {
   const touch = isTouch(), land = window.innerWidth >= window.innerHeight;
   b.classList.toggle('touch', touch); b.classList.toggle('land', land); b.classList.toggle('port', !land);
   b.classList.toggle('riding', !!S && (S.mode === 'play' || S.mode === 'dying'));
-  b.classList.toggle('needrot', touch && !land && !rotSkipped && b.classList.contains('playing'));
+  b.classList.remove('needrot');
+  const toast = $('rotToast');
+  if (toast && touch && !land && b.classList.contains('playing')) { if (!layout.shownPort) { layout.shownPort = true; toast.classList.add('show'); clearTimeout(layout.tt); layout.tt = setTimeout(() => toast.classList.remove('show'), 4500); } }
+  else if (toast) { if (land) layout.shownPort = false; toast.classList.remove('show'); }
   try { document.documentElement.style.setProperty('--stageBottom', cv.getBoundingClientRect().bottom + 'px'); } catch (e) { /* ignore */ }
 }
 
@@ -1484,7 +1529,7 @@ $('tutNext').addEventListener('click', () => { if (tutI >= TUT().length - 1) end
 $('tutPrev').addEventListener('click', () => { if (tutI > 0) { tutI--; renderTut(); } });
 $('tutSkip').addEventListener('click', endTutorial);
 $('fsBtn').addEventListener('click', toggleFullscreen);
-$('rotSkip').addEventListener('click', () => { rotSkipped = true; layout(); });
+if ($('calBtn')) $('calBtn').addEventListener('click', () => { calibrateTilt(); S.banner = { text: '🎯 ক্যালিব্রেট হয়েছে', sub: 'এখনকার ধরনটাই সোজা', t: 1.2 }; });
 $('subsChk').addEventListener('change', e => { subsTouched = true; settings.subs = e.target.checked; });
 $('weatherBtns').addEventListener('click', e => { const t = e.target; if (!t || !t.dataset || !t.dataset.w) return; $('weatherSel').value = t.dataset.w; Array.from($('weatherBtns').children).forEach(c => c.classList.toggle('on', c === t)); });
 $('menuBtn').addEventListener('click', toMenu);
@@ -1497,7 +1542,7 @@ const savedName = store.get('tm_name'); if (savedName) $('nameInput').value = sa
 CTRL.mode = ['manual', 'tilt', 'auto'].includes(store.get('tm_ctrl')) ? store.get('tm_ctrl') : (('ontouchstart' in window) || (navigator.maxTouchPoints > 0) ? 'auto' : 'manual'); // first visit: phones start on the easiest mode
 $('invChk').checked = store.get('tm_inv') === '1';
 Array.from($('ctrlBtns').children).forEach(c => c.classList.toggle('on', c.dataset.c === CTRL.mode));
-$('ctrlBtns').addEventListener('click', e => { const t = e.target; if (!t || !t.dataset || !t.dataset.c) return; CTRL.mode = t.dataset.c; store.set('tm_ctrl', CTRL.mode); Array.from($('ctrlBtns').children).forEach(c => c.classList.toggle('on', c === t)); if (CTRL.mode === 'tilt') enableTilt(); applyCtrlClass(); $('ctrlNote').textContent = CTRL_NOTE[CTRL.mode]; });
+$('ctrlBtns').addEventListener('click', e => { const t = e.target && e.target.closest ? e.target.closest('button') : e.target; if (!t || !t.dataset || !t.dataset.c) return; CTRL.mode = t.dataset.c; store.set('tm_ctrl', CTRL.mode); Array.from($('ctrlBtns').children).forEach(c => c.classList.toggle('on', c === t)); if (CTRL.mode === 'tilt') enableTilt(); applyCtrlClass(); $('ctrlNote').textContent = CTRL_NOTE[CTRL.mode]; });
 const CTRL_NOTE = { manual: 'বাটন বা কিবোর্ড: ◀ ▶ হেলাও, ✋ ধরো, 🐢 ধীরে।', tilt: 'টিল্ট (Tilt): ফোন ডানে-বামে হেলালে রিক্সা হেলবে, তাই স্ক্রিনে ◀ ▶ বাটন থাকবে না। ফোনের উপরের দিক নিজের দিকে টানলে হাত ধরবে, দূরে ঠেললে ধীরে চলবে। দিক উল্টো মনে হলে "উল্টো" টিক দাও। সেন্সর না পেলে বাটন নিজে থেকেই ফিরে আসবে।', auto: 'অটো (Auto balance): গেম নিজেই ব্যালান্স রাখবে, তাই ◀ ▶ নেই। শুধু দরকারে ✋ আর 🐢 চাপো — সবচেয়ে সহজ।' };
 $('ctrlNote').textContent = CTRL_NOTE[CTRL.mode]; applyCtrlClass();
 FARE.gender = store.get('tm_gender') === 'f' ? 'f' : 'm';

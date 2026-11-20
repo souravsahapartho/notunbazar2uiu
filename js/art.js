@@ -341,7 +341,7 @@ window.ART = function (E) {
     ctx.fillStyle = '#94a3b8'; ctx.fillRect(cx + 60, B - 64, 70, 64); ctx.fillStyle = '#e2e8f0'; ctx.fillRect(cx + 66, B - 58, 58, 26); ctx.fillStyle = '#334155'; ctx.fillRect(cx + 54, B - 70, 82, 8); // guard booth
     person(cx + 148, B, .85, { shirt: '#1e3a8a', pants: '#1e3a8a', ph: 0, skin: SKIN[1] });
     for (let k = 0; k < 6; k++) flowerBed(cx - 200 + k * 76, B + 2, 100 + k);
-    avenue(cx + 300, B, 'বিটুমিন গেট রোড', 'BITUMEN GATE ROAD');
+    avenue(cx + 300, B, 'বিটুমিন গেট রোড', 'BITUMEN GATE ROAD', 1);
   }
 
   /* ---------- tangled overhead wires ---------- */
@@ -478,19 +478,46 @@ window.ART = function (E) {
   }
 
   /* ---------- big boulevard branching off the main road (Bitumen Gate road, road to UIU) ---------- */
-  function avenue(cx, B, label, sub) {
-    const w = 190, top = B - 190;
-    ctx.fillStyle = '#cbd5e1'; ctx.beginPath(); ctx.moveTo(cx - w / 2, B); ctx.lineTo(cx - 26, top); ctx.lineTo(cx + 26, top); ctx.lineTo(cx + w / 2, B); ctx.fill();
-    ctx.fillStyle = '#475569'; ctx.beginPath(); ctx.moveTo(cx - w / 2 + 14, B); ctx.lineTo(cx - 20, top); ctx.lineTo(cx + 20, top); ctx.lineTo(cx + w / 2 - 14, B); ctx.fill();
-    ctx.strokeStyle = '#facc15'; ctx.lineWidth = 3; ctx.setLineDash([12, 10]); ctx.beginPath(); ctx.moveTo(cx, B); ctx.lineTo(cx, top); ctx.stroke(); ctx.setLineDash([]);
-    ctx.fillStyle = '#16a34a'; ctx.beginPath(); ctx.moveTo(cx - 8, B); ctx.lineTo(cx - 2, top); ctx.lineTo(cx + 2, top); ctx.lineTo(cx + 8, B); ctx.fill();
-    for (const s of [-1, 1]) for (let k = 0; k < 4; k++) {
-      const f = k / 4, y = B - 10 - f * 170, x = cx + s * (w / 2 - 6 - f * (w / 2 - 28)), sc = 1 - f * .6;
-      ctx.fillStyle = '#6b7280'; ctx.fillRect(x - 1.5 * sc, y - 56 * sc, 3 * sc, 56 * sc); ctx.fillStyle = '#fde68a'; circle(x, y - 58 * sc, 5 * sc);
-      ctx.fillStyle = '#15803d'; circle(x + s * 14 * sc, y - 36 * sc, 14 * sc);
+  function avenue(cx, B, label, sub, bend) {
+    bend = bend || 1;
+    const y0 = B + 30, yt = B - 178, wb = 196, wt = 36;
+    const half = f => (wb / 2) * (1 - f) + (wt / 2) * f;
+    const shift = f => bend * 78 * f * f;           // the side street bends away as it recedes
+    const ex = (s, f) => cx + shift(f) + s * half(f);
+    const ey = f => y0 + (yt - y0) * f;
+    // buildings lining both sides, far to near, shrinking with distance
+    for (let k = 7; k >= 0; k--) for (const s of [-1, 1]) {
+      const f = k / 8 + .03, x = ex(s, f), yb = ey(f), sc = 1 - f * .72;
+      const bw = 78 * sc, bh = (120 + hash(k * 3.7 + s + (cx | 0) * .01) * 100) * sc;
+      ctx.fillStyle = pickH(['#e2c9a0', '#c7d2e0', '#e9b7a6', '#b9d6c6', '#d8c2e6', '#f1d9a0'], k + (s > 0 ? 3 : 0) + (cx | 0));
+      ctx.fillRect(s < 0 ? x - bw : x, yb - bh, bw, bh);
+      ctx.fillStyle = 'rgba(255,255,255,.5)';
+      for (let wy = yb - bh + 8 * sc; wy < yb - 10 * sc; wy += 17 * sc) for (let wx = (s < 0 ? x - bw : x) + 7 * sc; wx < (s < 0 ? x : x + bw) - 9 * sc; wx += 15 * sc) ctx.fillRect(wx, wy, 6 * sc, 9 * sc);
     }
-    ctx.fillStyle = '#0f766e'; rr(cx - 70, top - 30, 140, 34, 8); ctx.fill();
-    txt(label, cx, top - 12, 18, '#fff', 'center', 700); if (sub) txt(sub, cx, top + 1, 10, '#ccfbf1', 'center', 600);
+    // road surface with curved edges
+    ctx.fillStyle = '#4b5563'; ctx.beginPath(); ctx.moveTo(ex(-1, 0), y0);
+    ctx.quadraticCurveTo(ex(-1, .5) - 6, B - 78, ex(-1, 1), yt); ctx.lineTo(ex(1, 1), yt);
+    ctx.quadraticCurveTo(ex(1, .5) + 6, B - 78, ex(1, 0), y0); ctx.closePath(); ctx.fill();
+    // kerbs and rounded corners where it meets the main road
+    ctx.strokeStyle = '#e5e7eb'; ctx.lineWidth = 3;
+    for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(ex(s, 0) + s * 22, y0 + 2); ctx.quadraticCurveTo(ex(s, 0), y0 + 2, ex(s, 0) - s * 2, y0 - 26); ctx.quadraticCurveTo(ex(s, .5) + s * -4, B - 78, ex(s, 1), yt); ctx.stroke(); }
+    // zebra crossing at the mouth
+    ctx.fillStyle = 'rgba(255,255,255,.85)';
+    for (let k = 0; k < 9; k++) ctx.fillRect(ex(-1, .05) + 6 + k * ((half(.05) * 2 - 12) / 9), ey(.06), (half(.05) * 2 - 12) / 18, 9);
+    // dashed centre line following the bend
+    ctx.fillStyle = '#facc15';
+    for (let f = .14; f < .96; f += .1) { const sc = 1 - f * .75; ctx.fillRect(cx + shift(f) - 1.5 * sc, ey(f), 3 * sc, 15 * sc); }
+    // street lamps and trees along both edges
+    for (const s of [-1, 1]) for (const f of [.2, .45, .7]) {
+      const x = ex(s, f) + s * 10, y = ey(f), sc = 1 - f * .7;
+      ctx.fillStyle = '#6b7280'; ctx.fillRect(x - 1.5 * sc, y - 54 * sc, 3 * sc, 54 * sc);
+      ctx.fillStyle = '#fde68a'; ctx.beginPath(); ctx.arc(x, y - 56 * sc, 5 * sc, 0, 7); ctx.fill();
+      ctx.fillStyle = '#15803d'; ctx.beginPath(); ctx.arc(x + s * 18 * sc, y - 30 * sc, 15 * sc, 0, 7); ctx.fill();
+    }
+    // hanging name board
+    const bx = cx + shift(1);
+    ctx.fillStyle = '#0f766e'; rr(bx - 76, yt - 34, 152, 36, 8); ctx.fill();
+    txt(label, bx, yt - 15, 17, '#fff', 'center', 700); if (sub) txt(sub, bx, yt - 2, 10, '#ccfbf1', 'center', 600);
   }
 
   /* ---------- Chef's Table food court (United City) ---------- */
@@ -546,7 +573,7 @@ window.ART = function (E) {
     for (let k = 0; k < 4; k++) person(cx - 60 + k * 36, B, .85, { shirt: k % 2 ? '#f8fafc' : '#e2e8f0', pants: '#f1f5f9', skin: pickH(SKIN, k), ph: 0, hair: '#e5e7eb' });
     ctx.restore();
     // junction: the road to UIU turns off to the left
-    avenue(cx + 340, B, 'ইউআইইউ ⬅ বামে', 'ভার্সিটি রোড');
+    avenue(cx - 350, B, 'ইউআইইউ ⬅ বামে', 'ভার্সিটি রোড', -1);
   }
 
   /* ---------- UIU campus gate (drawn in front of the main block) ---------- */
