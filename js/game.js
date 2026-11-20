@@ -23,9 +23,9 @@ const FONT = '"Hind Siliguri","Noto Sans Bengali",sans-serif';
 const STAGES = [
   { bn: 'নতুন বাজার',          short: 'নতুনবাজার', en: 'Natun Bazar',  sky: ['#ffb36b', '#ffe6a8'], rough: 1.0, puddle: .15 },
   { bn: 'ফ্যামিলি বাজার',      short: 'ফ্যামিলি',  en: 'Family Bazar', sky: ['#7ec8ff', '#dff4ff'], rough: 1.1, puddle: .20 },
-  { bn: 'সাহেবনগর',           short: 'সাহেবনগর', en: 'Sahebnagar',   sky: ['#59b8ff', '#c8efff'], rough: 1.5, puddle: .45 },
+  { bn: 'সাঈদ নগর',           short: 'সাঈদ নগর', en: 'Sayed Nagar',   sky: ['#59b8ff', '#c8efff'], rough: 1.5, puddle: .45 },
   { bn: 'দশতলা',              short: 'দশতলা',    en: '10 Tola',      sky: ['#4aa8ff', '#bfe9ff'], rough: 1.4, puddle: .30 },
-  { bn: 'ভিটামিন গেট',         short: 'ভিটামিন',  en: 'Vitamin Gate', sky: ['#6cb4ff', '#ffeec2'], rough: 1.3, puddle: .25 },
+  { bn: 'বিটুমিন গেট',         short: 'বিটুমিন',  en: 'Bitumen Gate', sky: ['#6cb4ff', '#ffeec2'], rough: 1.3, puddle: .25 },
   { bn: 'শেষ টেবিল (ইউ-টার্ন)', short: 'ইউ-টার্ন',  en: 'U-turn',       sky: ['#ff9a62', '#ffd9a0'], rough: 1.2, puddle: .20 },
   { bn: 'মসজিদ আল মুস্তাফা',    short: 'মসজিদ',    en: 'Al Mustafa',   sky: ['#c77dff', '#ffc2d6'], rough: 1.1, puddle: .15 },
   { bn: 'ইউআইইউ',             short: 'UIU',      en: 'UIU',          sky: ['#ff7aa2', '#ffd27a'], rough: .6,  puddle: .05 }
@@ -37,9 +37,10 @@ const UTURN_AT = 5 * SEG + 150;
 const UTURN_DUR = 3.2;
 // fair fare ranges in taka: [low, high]. Edit freely.
 const BOARDINGS = [
-  { id: 'natun',  bn: 'নতুন বাজার', at: 0,       dry: [50, 50], rain: [50, 70], rdry: [60, 80], rrain: [90, 120] },
-  { id: 'office', bn: 'অফিস লাইন',  at: 2 * SEG, dry: [30, 40], rain: [40, 50], rdry: [40, 50], rrain: [60, 70] },
-  { id: 'tola',   bn: 'দশতলা',     at: 3 * SEG, dry: [30, 30], rain: [30, 40], rdry: [30, 40], rrain: [50, 60] }
+  { id: 'natun',  bn: 'নতুন বাজার',     at: 0,                 dry: [50, 50], rain: [50, 70] },
+  { id: 'family', bn: 'ফ্যামিলি বাজার', at: 1 * SEG + 140 - 70, dry: [40, 40], rain: [40, 60] },
+  { id: 'sayed',  bn: 'সাঈদ নগর',       at: 2 * SEG + 140 - 70, dry: [30, 40], rain: [40, 50] },
+  { id: 'tola',   bn: 'দশতলা',          at: 3 * SEG + 140 - 70, dry: [30, 30], rain: [30, 40] }
 ];
 
 /* ---------- helpers ---------- */
@@ -127,37 +128,55 @@ const sfx = {
   die() { [300, 250, 200, 140].forEach((f, i) => tone(f, .45, 'sawtooth', .09, i * .28)); },
   grip() { tone(220, .05, 'square', .04); }
 };
-let bnVoices = [], subsTouched = false, speaking = 0;
+let bnVoices = [], subsTouched = false, speaking = 0, lastSpoke = {}, lastAny = -99;
+const MALE_RE = /pradeep|bashkar|male|man\b|ahnaf|tanvir|rafi/i;
+const FEMALE_RE = /nabanita|tanishaa|female|woman|ananya|google|aria|jenny/i;
 function loadVoices() {
   if (!('speechSynthesis' in window)) return;
   bnVoices = speechSynthesis.getVoices().filter(v => /^bn/i.test(v.lang)).sort((a, b) => a.name.localeCompare(b.name));
   const el = $('voiceNote');
-  if (el) el.textContent = bnVoices.length ? `🔊 ${bnVoices.length}টি বাংলা ভয়েস পাওয়া গেছে — প্রতিটি চরিত্রের ভয়েস সব সময় একই থাকবে।`
+  if (el) el.textContent = bnVoices.length ? `🔊 ${bnVoices.length}টি বাংলা ভয়েস পাওয়া গেছে — ছেলে/মেয়ে ভেদে ভয়েস বদলাবে।`
     : '🔇 এই ডিভাইসে বাংলা ভয়েস নেই — লেখা (সাবটাইটেল) দেখানো হবে।';
-  if (!subsTouched && $('subsChk')) $('subsChk').checked = !bnVoices.length;
+  if (!subsTouched && $('subsChk')) { $('subsChk').checked = !bnVoices.length; settings.subs = !bnVoices.length; }
 }
 if ('speechSynthesis' in window) { loadVoices(); speechSynthesis.onvoiceschanged = loadVoices; }
-// fixed voice profile per character: the same character always sounds the same
+function voiceFor(g) {
+  if (!bnVoices.length) return null;
+  const want = g === 'f' ? FEMALE_RE : MALE_RE, other = g === 'f' ? MALE_RE : FEMALE_RE;
+  return bnVoices.find(v => want.test(v.name) && !other.test(v.name)) || bnVoices.find(v => want.test(v.name)) || bnVoices[g === 'f' ? bnVoices.length - 1 : 0];
+}
+// fixed profile per character; the student follows the gender chosen in the menu
 const VP = {
-  driver: { p: .78, r: .96, i: 0 }, player: { p: 1.0, r: 1.04, i: 1 }, car: { p: .68, r: 1.0, i: 0 }, bus: { p: .5, r: .9, i: 0 },
-  rick: { p: 1.18, r: .92, i: 1 }, cng: { p: .92, r: 1.12, i: 0 }, crowd: { p: .6, r: 1.18, i: 0 }, ped: { p: 1.32, r: 1.05, i: 1 },
-  hawker: { p: .88, r: 1.22, i: 1 }, tea: { p: .95, r: 1.1, i: 0 }, chop: { p: .8, r: 1.15, i: 0 }
+  driver: { g: 'm', p: .72, r: .98 }, car: { g: 'm', p: .62, r: 1 }, bus: { g: 'm', p: .5, r: .9 }, rick: { g: 'm', p: .85, r: 1 },
+  cng: { g: 'm', p: .8, r: 1.05 }, crowd: { g: 'm', p: .6, r: 1.12 }, ped: { g: 'f', p: 1.2, r: 1.05 }, hawker: { g: 'm', p: .95, r: 1.15 },
+  tea: { g: 'm', p: .9, r: 1.05 }, chop: { g: 'm', p: .78, r: 1.1 }
 };
+function profOf(key) {
+  if (key === 'player') return FARE.gender === 'f' ? { g: 'f', p: 1.12, r: 1.04 } : { g: 'm', p: .98, r: 1.06 };
+  return VP[key] || VP.driver;
+}
 function voiceKey(who, ref) {
-  if (who === 'driver' && S && S.vehicle === 'rick') return 'rick';
   if (who === 'other') return (ref && ref.type) || 'car';
   if (who === 'amb') return (ref && ref.key) || 'hawker';
   return who;
 }
-function speak(text, key, force) {
-  if (!settings.voice || settings.mute || !bnVoices.length || !('speechSynthesis' in window)) return;
-  if (!force && speaking >= 2) return;
-  const prof = VP[key] || VP.player, v = bnVoices[prof.i % bnVoices.length];
+const nowS = () => performance.now() / 1000;
+// the street is not a radio: characters speak only now and then (student rarest)
+function canSpeak(key) {
+  const gap = key === 'player' ? 16 : key === 'driver' ? 10 : 7, n = nowS();
+  return n - (lastSpoke[key] === undefined ? -99 : lastSpoke[key]) > gap && n - lastAny > 3.2;
+}
+function speak(text, key, force, cb) {
+  if (!settings.voice || settings.mute || !bnVoices.length || !('speechSynthesis' in window)) return false;
+  if (!force && (speaking >= 2 || !canSpeak(key))) return false;
+  const prof = profOf(key), v = voiceFor(prof.g);
   const u = new SpeechSynthesisUtterance(text);
   u.voice = v; u.lang = v.lang; u.pitch = prof.p; u.rate = prof.r;
   if (force) { speechSynthesis.cancel(); speaking = 0; }
-  speaking++; u.onend = u.onerror = () => { speaking = Math.max(0, speaking - 1); };
+  lastSpoke[key] = lastAny = nowS();
+  speaking++; u.onend = u.onerror = () => { speaking = Math.max(0, speaking - 1); if (cb) cb(); };
   speechSynthesis.speak(u);
+  return true;
 }
 
 /* ---------- state ---------- */
@@ -185,14 +204,15 @@ function newState() {
 
 function say(who, text, opts) {
   opts = opts || {};
-  S.bubbles.push({ who, text, t: 0, life: opts.life || 2.8, ref: opts.ref || null });
+  const b0 = { who, text, t: 0, life: opts.life || 2.8, ref: opts.ref || null, silent: false };
+  S.bubbles.push(b0);
   if (S.bubbles.length > 5) S.bubbles.shift();
-  if (opts.speak !== false) speak(text, voiceKey(who, opts.ref), opts.force);
+  if (opts.speak !== false && !speak(text, voiceKey(who, opts.ref), opts.force)) b0.silent = true;
 }
 function later(t, fn) { S.pend.push({ t, fn }); }
 function jolt(mag, sign) {
   sign = sign || (Math.random() < .5 ? -1 : 1);
-  S.va += sign * mag * (S.gripping ? .32 : 1);
+  S.va += sign * mag * .72 * (S.gripping ? .32 : 1);
   S.bobV -= 60 * Math.min(1.5, mag);
   S.shake = Math.max(S.shake, Math.min(8, mag * 3));
 }
@@ -213,7 +233,7 @@ function spawnVeh(x) {
   const type = pick(['car', 'car', 'bus', 'rick', 'rick', 'cng']), d = VT[type];
   const v0 = (type === 'rick' && Math.random() < .35) ? .4 : rand(d.v[0], d.v[1]); // some rickshaws wait at the corner
   S.vehs.push({
-    type, x, len: d.len, v: v0, stopped: v0 < 1, wrongSide: Math.random() < .3, hit: false, leaving: false, yoff: 0, tail: 0,
+    type, x, len: d.len, v: v0, stopped: v0 < 1, wrongSide: Math.random() < .15, hit: false, leaving: false, yoff: 0, tail: 0,
     exit: S.clock + rand(7, 11), col: pick(VCOL), seed: Math.random() * 100
   });
 }
@@ -223,7 +243,7 @@ function startGame() { // menu -> haggle screen
   audioInit();
   FARE.name = ($('nameInput').value || '').trim() || 'বন্ধু';
   store.set('tm_name', FARE.name);
-  settings.voice = $('voiceChk').checked; settings.subs = $('subsChk').checked;
+  settings.voice = $('voiceChk').checked; settings.subs = $('subsChk').checked; subsTouched = true;
   FARE.weather = $('weatherSel').value;
   goFullscreen();
   if (!store.get('tm_tut')) showTutorial(openFare); else openFare();
@@ -232,12 +252,12 @@ function beginRide() { // haggle done -> ride
   const deal = FARE.deal; if (!deal) return;
   audioInit();
   S = newState(); S.mode = 'play'; S.name = FARE.name; S.deal = deal; S.rain = deal.rain; S.mood = deal.mood;
-  S.vehicle = FARE.vehicle;
+  S.gender = FARE.gender;
   S.dist = deal.at; S.stageIdx = stageOf(deal.at); S.nextRoadX = S.dist + 30; S.nextVehX = S.dist + 75; S.nextPedX = S.dist + 60;
   S.jams = { 2: Math.random() < .5, 4: Math.random() < .55 };
-  S.score = Math.max(0, deal.ask0 - deal.paid) * 3 - Math.max(0, deal.paid - deal.hi) * 2;
+  S.score = deal.skip ? 0 : Math.max(0, deal.ask0 - deal.paid) * 3 - Math.max(0, deal.paid - deal.hi) * 2;
   $('fare').classList.add('hidden'); $('menu').classList.add('hidden'); $('end').classList.add('hidden');
-  document.body.classList.add('playing'); document.body.classList.remove('ended');
+  document.body.classList.add('playing'); document.body.classList.remove('ended'); layout();
   say('driver', pick(L.start), { speak: true, force: true });
   if (S.mood === 'angry') later(2.4, () => say('driver', pick(L.moodAngry), { speak: true }));
   if (S.mood === 'happy') later(2.4, () => say('driver', pick(L.moodHappy), { speak: true }));
@@ -293,9 +313,8 @@ function update(dt) {
   for (let i = S.pend.length - 1; i >= 0; i--) { S.pend[i].t -= dt; if (S.pend[i].t <= 0) { const f = S.pend[i].fn; S.pend.splice(i, 1); f(); } }
 
   // speed
-  const rk = S.vehicle === 'rick' ? .55 : 1;
-  const cruise = (12.5 + 5 * prog + (S.mood === 'angry' ? 2.5 : S.mood === 'happy' ? -1.5 : 0)) * rk;
-  let target = inp.slow ? 5.5 * rk : cruise;
+  const cruise = 11.5 + 4.5 * prog + (S.mood === 'angry' ? 2.5 : S.mood === 'happy' ? -1.5 : 0);
+  let target = inp.slow ? 5.5 : cruise;
   if (S.uturn.state === 1) target = 6;
   if (S.recover > 0) target = Math.min(target, 7);
   if (S.stopT > 0) target = 0;
@@ -354,7 +373,7 @@ function update(dt) {
     S.nearT = 3; say('player', pick(L.nearFall), { speak: true, life: 1.8 });
   }
   if (Math.abs(S.a) >= 1 && S.recover <= 0) {
-    S.falls++; S.life -= 25; S.a = 0; S.va = 0; S.recover = 1.6; S.score -= 40;
+    S.falls++; S.life -= 16; S.a = 0; S.va = 0; S.recover = 1.6; S.score -= 40;
     S.shake = 10; S.flash = .7; S.flashCol = '#ef4444'; sfx.thud();
     say('player', pick(L.fall), { speak: true, force: true });
     if (S.life <= 0) { S.life = 0; die('fall'); return; }
@@ -435,9 +454,9 @@ function update(dt) {
 const AMB = [
   { x: 30, key: 'hawker', t: 'জামা একশো টাকা, একশো টাকা! যা নেন একশো!' }, { x: 55, key: 'tea', t: 'চা, গরম চা! চা জয়!' },
   { x: 110, key: 'rick', t: 'ভাই রিক্সা লাগবে? ইউআইইউ!' }, { x: SEG + 60, key: 'chop', t: 'গরম গরম চপ, পেঁয়াজু!' },
-  { x: SEG + 130, key: 'hawker', t: 'ভাই, এই শার্ট একশো টাকা!' }, { x: 2 * SEG + 95, key: 'rick', t: 'রিক্সা, রিক্সা! সাহেবনগর!' },
+  { x: SEG + 130, key: 'hawker', t: 'ভাই, এই শার্ট একশো টাকা!' }, { x: 2 * SEG + 95, key: 'rick', t: 'রিক্সা, রিক্সা! সাঈদ নগর!' },
   { x: 2 * SEG + 170, key: 'tea', t: 'চা-পান, চা-পান!' }, { x: 3 * SEG + 100, key: 'ped', t: 'ওই ভাই, দেইখা চালান!' },
-  { x: 4 * SEG + 90, key: 'bus', t: 'ভিটামিন গেট, ভিটামিন গেট! নামেন নামেন!' }, { x: 6 * SEG + 80, key: 'ped', t: 'ইউআইইউ, ইউআইইউ!' }
+  { x: 4 * SEG + 90, key: 'bus', t: 'বিটুমিন গেট, বিটুমিন গেট! নামেন নামেন!' }, { x: 6 * SEG + 80, key: 'ped', t: 'ইউআইইউ, ইউআইইউ!' }
 ];
 function spawnPed(x) {
   if (inSafeZone(x)) return;
@@ -476,13 +495,13 @@ function updateWorld(dt) {
       S.jamDone[idx] = true;
       if (S.jams[idx] && at0 < at - 70) {
         for (let k = 0; k < 6; k++) { const type = pick(['car', 'cng', 'rick', 'car', 'bus']), d = VT[type]; S.vehs.push({ type, x: S.dist + 26 + k * 8, len: d.len, v: rand(1.5, 3), stopped: false, wrongSide: false, hit: false, leaving: false, yoff: 0, tail: 0, exit: S.clock + rand(9, 15), col: pick(VCOL), seed: Math.random() * 100 }); }
-        S.banner = { text: '🚦 জ্যাম!', sub: idx === 2 ? 'অটো স্ট্যান্ডের মোড়' : 'ভিটামিন গেটের সামনে', t: 0 };
+        S.banner = { text: '🚦 জ্যাম!', sub: idx === 2 ? 'অটো স্ট্যান্ডের মোড়' : 'বিটুমিন গেটের সামনে', t: 0 };
         say('driver', pick(L.jam), { force: true, life: 2.6 });
       }
     }
   }
   // pedestrians crossing the road
-  while (S.nextPedX < S.dist + 40) { spawnPed(S.nextPedX); const st = stageOf(S.nextPedX); S.nextPedX += (st === 0 || st === 2) ? rand(55, 90) : rand(80, 140); }
+  while (S.nextPedX < S.dist + 40) { spawnPed(S.nextPedX); const st = stageOf(S.nextPedX); S.nextPedX += (st === 0 || st === 2) ? rand(85, 130) : rand(120, 190); }
   for (const p of S.peds) {
     const d0 = p.x - S.dist;
     if (!p.go && d0 < 22 && d0 > 0) p.go = true;
@@ -497,7 +516,7 @@ function updateWorld(dt) {
   if (S.mob) {
     const m = S.mob; m.t += dt; m.x += m.v * dt; const gap = S.dist - m.x;
     if (!m.caught && gap < 1.5) {
-      m.caught = true; m.v = 0; S.life -= 20; S.score -= 80; S.shake = 12; S.flash = .8; S.flashCol = '#ef4444'; S.stopT = 1.2; sfx.thud();
+      m.caught = true; m.v = 0; S.life -= 12; S.score -= 80; S.shake = 12; S.flash = .8; S.flashCol = '#ef4444'; S.stopT = 1.2; sfx.thud();
       say('crowd', pick(L.mobCatch), { force: true, life: 2.4 }); later(1.6, () => { S.mob = null; });
     } else if (!m.caught && (m.t > 12 || gap > 60)) { say('crowd', pick(L.mobGiveUp), { life: 2.4 }); S.score += 60; S.mob = null; }
   }
@@ -513,12 +532,12 @@ function honk() {
   say('driver', pick(L.honk), { life: 1 });
   jolt(.25);
   if (S.honks > 10 && S.honks % 3 === 0) {
-    S.life -= 3; say('player', pick(L.honkFine), { speak: true, life: 2.2 });
+    S.life -= 2; say('player', pick(L.honkFine), { speak: true, life: 2.2 });
   }
 }
 function collide(v) {
   v.hit = true; v.leaving = true; v.v = Math.max(v.v, 9);
-  S.hits++; S.life -= 12; S.score -= 50;
+  S.hits++; S.life -= 7; S.score -= 50;
   S.speed = Math.min(S.speed, 4);
   jolt(2.3); S.shake = 10; S.flash = .5; S.flashCol = '#f59e0b'; sfx.thud();
   say('other', pick(L.carYell), { ref: v, speak: true, force: true, life: 2.6 });
@@ -602,8 +621,8 @@ const NAMED = [
   { x: SEG + 28, kind: 'biryani', name: 'কাচ্চি ঘর' }, { x: SEG + 60, kind: 'chop', name: 'চপ-সিঙ্গারা' }, { x: SEG + 92, kind: 'nagad', name: 'মা টেলিকম' },
   { x: SEG + 150, kind: 'confection', name: 'ফ্যামিলি স্টোর' }, { x: SEG + 215, kind: 'garments', name: 'ফ্যামিলি ফ্যাশন' },
   { x: 2 * SEG + 40, kind: 'furniture', name: 'আলমারি-খাট-সোফা' }, { x: 2 * SEG + 70, kind: 'furniture', name: 'কাঠের ঘর ফার্নিচার' },
-  { x: 2 * SEG + 120, kind: 'tong', name: 'সাহেবনগর চা' }, { x: 2 * SEG + 215, kind: 'furniture', name: 'ডিজাইন ফার্নিচার' },
-  { x: 3 * SEG + 30, kind: 'pharmacy', name: 'সেবা ফার্মেসি' }, { x: 4 * SEG + 30, kind: 'pharmacy', name: 'ভিটামিন ফার্মেসি' },
+  { x: 2 * SEG + 120, kind: 'tong', name: 'সাঈদ নগর চা' }, { x: 2 * SEG + 215, kind: 'furniture', name: 'ডিজাইন ফার্নিচার' },
+  { x: 3 * SEG + 30, kind: 'pharmacy', name: 'সেবা ফার্মেসি' }, { x: 4 * SEG + 30, kind: 'pharmacy', name: 'বিটুমিন ফার্মেসি' },
   { x: 4 * SEG + 215, kind: 'biryani', name: 'বিরিয়ানি হাউস' }, { x: 6 * SEG + 30, kind: 'nagad', name: 'আল মুস্তাফা টেলিকম' }
 ];
 const KINDS = [
@@ -651,7 +670,7 @@ function drawStreetLife() {
 }
 function drawLandmarkFront(i) {
   if (i === 0) A.rickStand(X(LM[0] - 14), SIDEY + 40, 'নতুন বাজার রিক্সা স্ট্যান্ড', 1, 4, ['সমাজখানা', 'সমাজখানা', 'নতুন বাজার', 'ঢাকা-১২']);
-  if (i === 2) A.rickStand(X(LM[2] - 10), SIDEY + 40, 'সাহেবনগর রিক্সা স্ট্যান্ড', 3, 6, ['সাহেবনগর', 'সমাজখানা', 'বাড্ডা']);
+  if (i === 2) A.rickStand(X(LM[2] - 10), SIDEY + 40, 'সাঈদ নগর রিক্সা স্ট্যান্ড', 3, 6, ['সাঈদ নগর', 'সমাজখানা', 'বাড্ডা']);
 }
 function drawPeds() {
   for (const p of S.peds) {
@@ -699,7 +718,7 @@ function drawLandmark(i) {
       txt('চা', cx - 100, B - 40, 28, '#fff', 'center', 700);
       for (const dx of [40, 120]) { ctx.fillStyle = '#5b3a1a'; ctx.fillRect(cx + dx, B - 100, 8, 100); ctx.fillStyle = '#4ade80'; ctx.beginPath(); ctx.ellipse(cx + dx + 4, B - 110, 44, 16, .4, 0, 7); ctx.ellipse(cx + dx + 4, B - 110, 44, 16, -.4, 0, 7); ctx.fill(); }
       ctx.fillStyle = '#374151'; ctx.fillRect(cx + 170, B - 200, 8, 200); ctx.fillStyle = '#0d9488'; rr(cx + 10, B - 260, 240, 56, 10); ctx.fill();
-      txt('সাহেবনগর', cx + 130, B - 220, 32, '#fff', 'center', 700);
+      txt('সাঈদ নগর', cx + 130, B - 220, 32, '#fff', 'center', 700);
       break; }
     case 3: { // 10 tola: tower + apartment blocks in front
       A.apartment(cx - 250, B, 130, 230, 3); A.apartment(cx + 250, B, 120, 190, 5); A.apartment(cx - 380, B, 110, 150, 8);
@@ -810,8 +829,8 @@ function drawAuto() {
   ctx.scale(S.face * S.turnSx, 1);
   const wa = S.wheel;
   ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(0, 4 - S.bobY, 90, 8, 0, 0, 7); ctx.fill();
-  const rick = S.vehicle === 'rick';
-  if (rick) A.rickshaw(0, 0, 1.12, { col: '#dc2626', seed: 12, t: S.t, wa: wa, pa: S.t * S.speed * 1.4, puller: true, cap: '#e5e7eb', lungi: '#2563eb', shirt: '#f1e4c8', plate: 'ঢাকা-১২' });
+  const rick = true;
+  A.rickshaw(0, 0, 1.12, { col: '#16a34a', seed: 12, t: S.t, wa: wa, puller: true, cap: '#e5e7eb', lungi: '#2563eb', shirt: '#f1e4c8', plate: 'টেসলা' });
   if (!rick) {
   // seats
   ctx.fillStyle = '#7f1d1d'; ctx.fillRect(-70, -74, 70, 12); ctx.fillRect(-74, -112, 8, 40);
@@ -830,8 +849,10 @@ function drawAuto() {
   // passenger
   const th = S.a * .6, hipx = -38, hipy = -72;
   ctx.save(); ctx.translate(hipx, hipy); ctx.rotate(th);
-  ctx.fillStyle = '#3b82f6'; rr(-10, -40, 20, 40, 5); ctx.fill();
-  ctx.fillStyle = '#f59e0b'; ctx.fillRect(-14, -36, 6, 26);
+  const fem = S.gender === 'f';
+  ctx.fillStyle = fem ? '#ec4899' : '#3b82f6'; rr(-10, -40, 20, 40, 5); ctx.fill();
+  ctx.fillStyle = fem ? '#a855f7' : '#f59e0b'; ctx.fillRect(-14, -36, 6, 26);
+  if (fem) { ctx.fillStyle = '#111'; ctx.fillRect(-14, -58, 7, 40); }
   ctx.fillStyle = '#e0b48a'; ctx.beginPath(); ctx.arc(0, -52, 12, 0, 7); ctx.fill();
   ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(0, -56, 12, Math.PI, 0); ctx.fill();
   const scared = Math.abs(S.a) > .55 || S.recover > 0;
@@ -868,6 +889,12 @@ function drawParts() {
 }
 
 function bubbleAnchor(b) {
+  if (S.mode === 'stand' && S.stand) {
+    const st = S.stand, sl = SLOTS[st.idx];
+    if (b.who === 'driver') return { x: sl.x + 33 * sl.sc, y: sl.y - 128 * sl.sc, c: '#f59e0b' };
+    if (b.who === 'player') return { x: st.px, y: st.py - 104, c: '#3b82f6' };
+    if (b.who === 'rick' && b.ref) return { x: b.ref.sx, y: b.ref.sy, c: '#16a34a' };
+  }
   if (b.who === 'driver') return { x: S.camX + S.face * 30, y: GY - 150 + S.bobY, c: '#f59e0b' };
   if (b.who === 'player') return { x: S.camX - S.face * 38, y: GY - 196 + S.bobY, c: '#3b82f6' };
   if (b.who === 'ped') return { x: b.ref ? X(b.ref.x) : W / 2, y: GY - 100, c: '#a855f7' };
@@ -906,7 +933,7 @@ function drawHUD() {
   bar(12, 38, 190, 16, S.stamina / 100, S.gripLocked ? '#6b7280' : '#22c55e', '✋ গ্রিপ' + (S.gripLocked ? ' (অবশ)' : ''));
   txt('পয়েন্ট ' + Math.max(0, Math.round(S.score)), W - 12, 28, 22, '#fff', 'right', 700, 'rgba(0,0,0,.55)');
   txt(Math.round(S.speed * 3.6) + ' কিমি/ঘ • হর্ন ' + S.honks, W - 12, 50, 14, '#fff', 'right', 600, 'rgba(0,0,0,.55)');
-  if (S.deal) txt((S.rain ? '☔ ' : '') + 'ভাড়া ৳' + S.deal.paid, W - 12, 68, 14, '#fde047', 'right', 700, 'rgba(0,0,0,.55)');
+  if (S.deal) txt((S.rain ? '☔ ' : '') + 'ভাড়া ' + (S.deal.skip ? '?' : '৳' + S.deal.paid), W - 12, 68, 14, '#fde047', 'right', 700, 'rgba(0,0,0,.55)');
   // route strip
   const x0 = 270, x1 = 690, y = 26;
   ctx.strokeStyle = 'rgba(0,0,0,.4)'; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke();
@@ -964,7 +991,7 @@ function drawScene() {
     ctx.fillStyle = '#ef4444'; ctx.fillRect(fx - 3, 392, 70 * -S.dir, 20);
   }
   drawMob();
-  drawAuto();
+  if (S.mode === 'stand') drawStand(); else drawAuto();
   drawParts();
   if (S.rain) drawRain();
 }
@@ -985,22 +1012,22 @@ function drawDeathScene() {
   // banners
   const name = S.name, place = placeOf(S.deathStage);
   const side = window.innerWidth >= window.innerHeight, sc = side ? .66 : 1;
+  const fem = S.gender === 'f', late = fem ? 'মরহুমা' : 'মরহুম';
   const B = [
-    { x: 40, t1: 'শোক সংবাদ', body: `${name} আর আমাদের মাঝে নেই।`, small: `নতুন বাজার–ইউআইইউ রুটে অটোরিকশার সিট আঁকড়ে ধরে রাখতে না পেরে ${place}-এ অকালে চলে গেছেন।` },
-    { x: 350, t1: 'গভীর শোক প্রকাশ', body: `প্রিয় সহপাঠী ${name}`, small: 'ইউআইইউ ক্লাসমেট ও টেসলা মামা পরিবারের পক্ষ থেকে গভীর সমবেদনা। তাঁর খালি সিটটি আজ অনেক ঝাঁকুনি মিস করছে।' },
-    { x: 660, t1: 'বিজ্ঞপ্তি', body: 'আগামীকালের কুইজ বহাল', small: 'এটেন্ডেন্স নিয়ে শিক্ষকেরা এখনো মন্তব্য করেননি। — ভাঙা রাস্তা সংস্কার কমিটি (গঠনের অপেক্ষায়)' }
+    { x: 24, t1: 'শোকবার্তা', body: `${name}-এর অকাল মৃত্যুতে ইউআইইউ পরিবার গভীরভাবে শোকাহত`, small: 'নতুন বাজার–ইউআইইউ পথে রিক্সার ঝাঁকুনিতে তিনি আমাদের ছেড়ে চলে গেছেন।' },
+    { x: 500, t1: 'দোয়া প্রার্থনা', body: `${late} ${name}-এর রূহের মাগফিরাতের জন্য দোয়া প্রার্থনা করছি`, small: 'ইতি — ইউআইইউ পরিবার, ঢাকা' }
   ];
   B.forEach((b, i) => {
     const appear = clamp((t - .3 - i * .45) * 2.5, 0, 1); if (appear <= 0) return;
-    const sw = Math.sin(S.t * 1.6 + i) * 1.2, bw = 250, bh = 235, by = 205 - (1 - appear) * 60;
+    const sw = Math.sin(S.t * 1.6 + i) * 1.2, bw = 430, bh = 250, by = 205 - (1 - appear) * 60;
     const bx = side ? 14 + i * (bw * sc + 10) : b.x;
     ctx.save(); ctx.globalAlpha = appear; ctx.translate(bx + bw * sc / 2, side ? by - 20 : by); ctx.scale(sc, sc); ctx.rotate(sw * .012);
     ctx.fillStyle = '#475569'; ctx.fillRect(-bw / 2 + 20, 0, 4, 165 + bh * .2); ctx.fillRect(bw / 2 - 24, 0, 4, 165 + bh * .2);
     ctx.fillStyle = '#fff'; ctx.strokeStyle = '#111'; ctx.lineWidth = 8; rr(-bw / 2, 0, bw, bh, 4); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#111'; ctx.fillRect(-bw / 2 + 10, 10, bw - 20, 38);
-    txt(b.t1, 0, 38, 24, '#fff', 'center', 700);
-    wrapText(b.body, 0, 80, bw - 34, 19, 24, '#111', 'center', 700);
-    wrapText(b.small, 0, 134, bw - 34, 13.5, 17, '#333', 'center', 600);
+    ctx.fillStyle = '#111'; ctx.fillRect(-bw / 2 + 10, 10, bw - 20, 52);
+    txt(b.t1, 0, 49, 34, '#fff', 'center', 700);
+    wrapText(b.body, 0, 108, bw - 40, 26, 34, '#111', 'center', 700);
+    wrapText(b.small, 0, 190, bw - 40, 16, 21, '#333', 'center', 600);
     ctx.fillStyle = '#111'; ctx.fillRect(-bw / 2 + 10, bh - 28, bw - 20, 3);
     ctx.restore();
   });
@@ -1026,6 +1053,7 @@ function render() {
   if (S.shake > 0) ctx.translate((Math.random() - .5) * S.shake, (Math.random() - .5) * S.shake);
   drawScene();
   if (S.mode === 'play' || S.mode === 'dying' || S.mode === 'win') { drawBubbles(); drawHUD(); }
+  if (S.mode === 'stand') drawBubbles();
   if (S.mode === 'win') {
     S.confetti.forEach(c => { ctx.fillStyle = c.c; ctx.fillRect(c.x, c.y, c.r, c.r * 1.6); });
     txt('🎓 পৌঁছে গেছ!', W / 2, 190, 44, '#fde047', 'center', 700, 'rgba(0,0,0,.6)');
@@ -1051,7 +1079,9 @@ function ambient(dt) {
 let last = performance.now();
 function frame(now) {
   const dt = Math.min(.05, (now - last) / 1000); last = now;
-  if (S.mode === 'play') update(dt);
+  if (document.body.classList.contains('needrot')) { /* waiting for the phone to be rotated */ }
+  else if (S.mode === 'play') update(dt);
+  else if (S.mode === 'stand') standTick(dt);
   else if (S.mode === 'dying') {
     S.deathT += dt; S.t += dt; S.flash = Math.max(0, S.flash - 1.5 * dt); S.shake = Math.max(0, S.shake - 25 * dt);
     S.speed *= Math.exp(-3 * dt); S.dist += S.speed * dt;
@@ -1068,21 +1098,31 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 
-/* ---------- fare haggling ---------- */
+/* ---------- fare haggling at the stand (spoken; the student answers with buttons) ---------- */
 const HG = L.haggle;
-const FARE = { name: 'বন্ধু', vehicle: 'auto', boarding: 'natun', weather: 'auto', rain: false, driver: null, deal: null, rerolls: 0 };
+const FARE = { name: 'বন্ধু', gender: 'm', boarding: 'natun', weather: 'auto', rain: false, driver: null, deal: null, busy: false, idx: 0, drivers: [] };
+const MAX_DRIVERS = 7;
 const r5 = v => Math.round(v / 5) * 5;
-const fmt = (s, p) => s.replace(/\{p\}/g, p);
-const fairOf = (b, rain) => FARE.vehicle === 'rick' ? (rain ? b.rrain : b.rdry) : (rain ? b.rain : b.dry);
-const vName = () => FARE.vehicle === 'rick' ? 'রিক্সা' : 'অটো';
+const bnum = n => String(n).replace(/\d/g, d => '০১২৩৪৫৬৭৮৯'[d]);
+const fmt = (s, p) => s.replace(/\{p\}/g, bnum(p));
+const fairOf = (b, rain) => rain ? b.rain : b.dry;
 const fairTxt = d => d.lo === d.hi ? '' + d.lo : d.lo + '–' + d.hi;
 const boardingOf = id => BOARDINGS.find(x => x.id === id) || BOARDINGS[0];
+// a jumble of rickshaws parked bumper to bumper (screen slots; visited front to back)
+const SLOTS = [
+  { x: 585, y: GY + 16, sc: 1.0 }, { x: 650, y: GY - 12, sc: .9 }, { x: 710, y: GY + 18, sc: 1.0 }, { x: 775, y: GY - 14, sc: .9 },
+  { x: 835, y: GY + 12, sc: .98 }, { x: 895, y: GY - 10, sc: .9 }, { x: 945, y: GY + 16, sc: .96 }
+];
+const slotTarget = i => SLOTS[i].x - 104 * SLOTS[i].sc;
 
 function newDriver(b, rain) {
-  const f = fairOf(b, rain), lo = f[0], hi = f[1], kind = Math.random() < .25;
-  const ask = kind ? hi : r5(hi + (rain ? rand(20, 40) : rand(10, 30)));
-  const min = kind ? lo : r5(rand(lo, hi + 10));
-  return { lo, hi, kind, ask, ask0: ask, min: Math.min(min, ask), rounds: 0, patience: 3, final: false, gone: false };
+  const f = fairOf(b, rain), lo = f[0], hi = f[1], kind = Math.random() < .3;
+  const ask = kind ? hi : r5(hi + (rain ? rand(15, 30) : rand(10, 20)));
+  const min = kind ? lo : r5(rand(lo, hi + 5));
+  return {
+    lo, hi, kind, ask, ask0: ask, min: Math.min(min, ask), rounds: 0, patience: 4, final: false, gone: false,
+    look: { col: pick(A.FRAME), seed: Math.random() * 100, skin: pick(['#c68a5a', '#a86f45', '#d8a276']), cap: Math.random() < .5 ? '#e5e7eb' : null, mask: Math.random() < .3, lungi: pick(['#2563eb', '#16a34a', '#b91c1c', '#7c3aed']), shirt: pick(['#f1e4c8', '#cbd5e1', '#fde68a', '#bbf7d0']) }
+  };
 }
 function respond(d, offer) {
   if (offer >= d.ask) return { r: 'accept', price: d.ask };
@@ -1094,66 +1134,158 @@ function respond(d, offer) {
   if (na >= d.ask) na = Math.max(d.min, d.ask - 5);
   d.ask = na; return { r: 'counter', price: na };
 }
-function chat(who, text) {
-  const c = $('chat'), el = document.createElement('div');
-  el.className = 'msg ' + who; el.textContent = text; c.appendChild(el); c.scrollTop = c.scrollHeight;
+function runPend(dt) {
+  for (let i = S.pend.length - 1; i >= 0; i--) { S.pend[i].t -= dt; if (S.pend[i].t <= 0) { const f = S.pend[i].fn; S.pend.splice(i, 1); f(); } }
+}
+// plays a short spoken exchange one line at a time (waits for the voice to finish)
+function seq(steps, done) {
+  FARE.busy = true; setFareButtons();
+  const my = S;
+  const run = i => {
+    if (S !== my || S.mode !== 'stand') return;
+    if (i >= steps.length) { FARE.busy = false; setFareButtons(); if (done) done(); return; }
+    const who = steps[i][0], text = steps[i][1], dur = text.length * .07 + .9;
+    let fired = false;
+    const next = () => { if (fired) return; fired = true; later(.25, () => run(i + 1)); };
+    say(who, text, { speak: false, life: dur + .5 });
+    const spoke = speak(text, who, true, next);
+    later(spoke ? text.length * .25 + 4 : dur, next);
+  };
+  run(0);
 }
 function updateOffer() { $('offerVal').textContent = '৳' + $('offer').value; }
-function setFareButtons(open) {
-  const d = FARE.driver;
-  $('offerBtn').disabled = !open; $('offer').disabled = !open; $('payBtn').disabled = !open;
-  $('payBtn').textContent = open && d ? `৳${d.ask}-এ রাজি` : 'রাজি';
-  $('nextBtn').disabled = FARE.rerolls >= 3 || !!FARE.deal;
-  $('nextBtn').textContent = `অন্য ${vName()} (${Math.max(0, 3 - FARE.rerolls)})`;
+function setFareButtons() {
+  const d = FARE.driver, free = !FARE.busy && !FARE.deal && !!d && !d.gone;
+  ['offerBtn', 'payBtn', 'muchBtn', 'poorBtn', 'stuBtn', 'skipBtn'].forEach(id => { $(id).disabled = !free; });
+  $('offer').disabled = !free;
+  $('payBtn').textContent = d && !d.gone ? `✅ ৳${d.ask}-এ রাজি` : '✅ রাজি';
+  const left = MAX_DRIVERS - 1 - FARE.idx;
+  $('nextBtn').disabled = FARE.busy || !!FARE.deal || left <= 0;
+  $('nextBtn').textContent = `↪ অন্য রিক্সা (${Math.max(0, left)})`;
 }
-function showDriver() {
-  const b = boardingOf(FARE.boarding), d = FARE.driver = newDriver(b, FARE.rain), f = fairOf(b, FARE.rain);
-  $('fareTitle').textContent = `${b.bn} → ইউআইইউ`;
-  $('fareInfo').textContent = (FARE.rain ? '☔ বৃষ্টি হচ্ছে' : '☀️ আকাশ পরিষ্কার') + ' • ন্যায্য ভাড়া ৳' + (f[0] === f[1] ? f[0] : f[0] + '–' + f[1]);
-  chat('system', FARE.vehicle === 'rick' ? (FARE.rerolls ? 'আরেকজন রিক্সাওয়ালা এগিয়ে এলেন…' : 'রিক্সা স্ট্যান্ড থেকে একজন রিক্সাওয়ালা এগিয়ে এলেন…') : (FARE.rerolls ? 'আরেকটা অটো এসে থামল…' : 'একটা অটো এসে থামল…'));
-  chat('driver', d.kind ? fmt(pick(HG.kind), d.ask) : fmt(pick(FARE.rain ? HG.askRain : HG.ask), d.ask) + ' ' + pick(HG.reasons));
-  if (d.ask > f[1] + 10) chat('player', pick(HG.playerOvercharge));
-  const sl = $('offer'); sl.max = FARE.vehicle === 'rick' ? 160 : 120; sl.value = f[0]; updateOffer();
-  setFareButtons(true);
+function askLine(d) {
+  const f = d.kind ? fmt(pick(HG.kind), d.ask) : fmt(pick(FARE.rain ? HG.askRain : HG.ask), d.ask);
+  return !d.kind && Math.random() < .45 ? f + ' ' + pick(HG.reasons) : f;
+}
+function onArrive() {
+  const d = FARE.driver, first = FARE.idx === 0, steps = [];
+  if (!first) steps.push(['driver', pick(HG.calls)]);
+  steps.push(['driver', pick(HG.where)], ['player', pick(HG.dest)], ['driver', askLine(d)]);
+  const f = fairOf(boardingOf(FARE.boarding), FARE.rain);
+  if (d.ask > f[1] + 10 && Math.random() < .6) steps.push(['player', pick(HG.playerOvercharge)]);
+  seq(steps);
+}
+function showFareInfo() {
+  const b = boardingOf(FARE.boarding), f = fairOf(b, FARE.rain);
+  $('fareTitle').textContent = `${b.bn} রিক্সা স্ট্যান্ড → ইউআইইউ`;
+  $('fareInfo').textContent = (FARE.rain ? '☔ বৃষ্টি' : '☀️ রোদ') + ' • ন্যায্য ভাড়া ৳' + (f[0] === f[1] ? f[0] : f[0] + '–' + f[1]);
 }
 function openFare() {
   const b = boardingOf(FARE.boarding);
   FARE.rain = FARE.weather === 'rain' || (FARE.weather === 'auto' && Math.random() < .4);
-  FARE.rerolls = 0; FARE.deal = null;
-  $('menu').classList.add('hidden'); $('end').classList.add('hidden'); document.body.classList.remove('playing', 'ended');
-  $('fare').classList.remove('hidden'); $('chat').innerHTML = ''; $('rideBtn').classList.add('hidden');
-  if (S && S.mode !== 'menu') { S = newState(); }
-  S.rain = FARE.rain; S.dist = b.at;
-  showDriver();
+  FARE.deal = null; FARE.busy = false;
+  $('menu').classList.add('hidden'); $('end').classList.add('hidden'); document.body.classList.remove('ended'); document.body.classList.add('playing');
+  $('fare').classList.remove('hidden'); layout();
+  S = newState(); S.mode = 'stand'; S.rain = FARE.rain; S.dist = b.at; S.camX = 300; S.stageIdx = stageOf(b.at); S.name = FARE.name; S.gender = FARE.gender;
+  layout();
+  FARE.drivers = Array.from({ length: MAX_DRIVERS }, () => newDriver(b, FARE.rain)); FARE.idx = 0; FARE.driver = FARE.drivers[0];
+  S.stand = { px: -60, py: GY + 34, state: 'walk', idx: 0, bt: 0, callT: 7, walking: true, boarded: -1, hop: 0 };
+  const sl = $('offer'); sl.max = 120; sl.value = Math.max(10, fairOf(b, FARE.rain)[0]); updateOffer();
+  showFareInfo(); setFareButtons();
 }
-function finishDeal(price) {
+function standTick(dt) {
+  S.t += dt; S.clock += dt; S.speed = 0;
+  runPend(dt);
+  S.bubbles.forEach(b => b.t += dt); S.bubbles = S.bubbles.filter(b => b.t < b.life);
+  const st = S.stand; if (!st) return;
+  if (st.state === 'walk') {
+    const tx = slotTarget(st.idx), dx = tx - st.px, step = 150 * dt;
+    st.walking = true;
+    if (Math.abs(dx) <= step) { st.px = tx; st.walking = false; st.state = 'talk'; onArrive(); } else st.px += Math.sign(dx) * step;
+  } else if (st.state === 'talk') {
+    st.callT -= dt;
+    if (st.callT <= 0 && !FARE.busy && !FARE.deal) {
+      st.callT = rand(9, 14);
+      const j = Math.min(SLOTS.length - 1, st.idx + 1 + Math.floor(Math.random() * 3)), sl = SLOTS[j];
+      say('rick', pick(HG.calls), { life: 2.6, ref: { sx: sl.x + 33 * sl.sc, sy: sl.y - 128 * sl.sc } });
+    }
+  } else if (st.state === 'board') {
+    st.bt += dt;
+    if (st.bt > 1.55 && st.state === 'board') { st.state = 'seated'; st.bt = 0; }
+  } else if (st.state === 'seated') {
+    st.bt += dt; if (st.bt > .55 && !st.go) { st.go = true; beginRide(); }
+  }
+}
+function drawStand() {
+  const st = S.stand; if (!st) return;
+  A.rickStand(X(S.dist + 760 / PPM), SIDEY + 44, boardingOf(FARE.boarding).bn + ' রিক্সা স্ট্যান্ড', 5, 0, null);
+  const order = SLOTS.map((_, i) => i).sort((a, b) => SLOTS[a].y - SLOTS[b].y);
+  for (const i of order) {
+    const sl = SLOTS[i], d = FARE.drivers[i], lk = d.look;
+    A.rickshaw(sl.x, sl.y, sl.sc, { col: lk.col, seed: lk.seed, t: S.t, wa: 0, puller: true, skin: lk.skin, cap: lk.cap, mask: lk.mask, lungi: lk.lungi, shirt: lk.shirt, plate: i % 2 ? 'টেসলা' : null, pass: st.boarded === i && (st.state === 'seated') });
+  }
+  const sl = SLOTS[st.idx];
+  if (st.state !== 'seated') {
+    let x = st.px, y = st.py, hop = 0;
+    if (st.state === 'board') {
+      const u = clamp((st.bt - .35) / .9, 0, 1);
+      const sx = sl.x - 40 * sl.sc, sy = sl.y - 52 * sl.sc;
+      x = st.px + (sx - st.px) * u; y = st.py + (sy - st.py) * u; hop = Math.sin(Math.PI * u) * 34;
+    }
+    A.person(x, y - hop, 1.05, { shirt: FARE.gender === 'f' ? '#ec4899' : '#3b82f6', pants: '#334155', skin: '#e0b48a', ph: st.walking ? S.t * 9 : (st.state === 'board' ? S.t * 12 : 0), dir: 1, bag: '#f59e0b', long: FARE.gender === 'f' });
+  }
+}
+function startBoarding(price, skip) {
+  const st = S.stand; st.state = 'board'; st.bt = 0; st.boarded = st.idx; FARE.busy = true; setFareButtons();
+}
+function finishDeal(price, skip) {
   const d = FARE.driver;
-  const mood = (!d.kind && price <= d.lo && d.ask0 - price >= 20) ? 'angry' : price >= d.hi + 10 ? 'happy' : 'ok';
-  FARE.deal = { paid: price, ask0: d.ask0, lo: d.lo, hi: d.hi, rain: FARE.rain, at: boardingOf(FARE.boarding).at, boarding: FARE.boarding, mood };
+  const mood = (!skip && !d.kind && price <= d.lo && d.ask0 - price >= 20) ? 'angry' : (!skip && price >= d.hi + 10) ? 'happy' : 'ok';
+  FARE.deal = { paid: price, ask0: d.ask0, lo: d.lo, hi: d.hi, rain: FARE.rain, at: boardingOf(FARE.boarding).at, boarding: FARE.boarding, mood, skip: !!skip };
   d.gone = true;
-  chat('system', `✅ চুক্তি ৳${price}` + (price > d.hi ? ' — একটু বেশিই দিলে!' : price < d.hi ? ' — দারুণ দরাদরি!' : ' — ন্যায্য ভাড়া'));
-  setFareButtons(false); $('rideBtn').classList.remove('hidden');
+  if (S && S.mode === 'stand') startBoarding(price, skip);
+}
+function driverLeaves() {
+  const d = FARE.driver; d.gone = true;
+  if (FARE.idx >= MAX_DRIVERS - 1) { // nobody else around: he calls you back
+    d.gone = false; d.final = true; d.ask = d.min;
+    seq([['driver', fmt(pick(HG.last), d.min)]]);
+  } else seq([['driver', pick(HG.refuse)]]);
 }
 function onOffer() {
-  const d = FARE.driver; if (!d || d.gone || FARE.deal) return;
-  const off = +$('offer').value;
-  chat('player', fmt(pick(HG.playerCounter), off));
-  const res = respond(d, off);
-  if (res.r === 'accept') { chat('driver', pick(HG.accept)); finishDeal(res.price); sfx.horn(); return; }
-  if (res.r === 'refuse') {
-    chat('driver', pick(HG.refuse)); d.gone = true;
-    if (FARE.rerolls >= 3) { // nobody else around: driver comes back
-      d.gone = false; d.final = true; d.ask = d.min; chat('driver', fmt(pick(HG.last), d.min));
-      setFareButtons(true);
-    } else setFareButtons(false);
-    return;
+  const d = FARE.driver; if (!d || d.gone || FARE.deal || FARE.busy) return;
+  const off = +$('offer').value, res = respond(d, off), pl = ['player', fmt(pick(HG.playerCounter), off)];
+  if (res.r === 'accept') { seq([pl, ['driver', pick(HG.accept)]], () => finishDeal(res.price)); return; }
+  if (res.r === 'refuse') { seq([pl]); later(0, () => {}); const dd = d; setTimeout0(() => { if (FARE.driver === dd) driverLeaves(); }, pl[1]); return; }
+  seq([pl, ['driver', fmt(pick(res.final ? HG.final : HG.counter), res.price)]]);
+}
+const setTimeout0 = (fn, txt) => later(txt.length * .07 + 2.2, fn);
+function plead(kind) {
+  const d = FARE.driver; if (!d || d.gone || FARE.deal || FARE.busy) return;
+  const say1 = ['player', pick(HG['say' + kind])];
+  if (d.final || d.ask <= d.min) { seq([say1, ['driver', pick(HG.noMore)]]); return; }
+  const chance = d.kind ? .95 : kind === 'Much' ? .6 : kind === 'Poor' ? .55 : .5;
+  d.rounds++;
+  if (Math.random() < chance) {
+    let na = r5(Math.max(d.min, d.ask - (kind === 'Much' ? rand(5, 15) : rand(5, 10))));
+    if (na >= d.ask) na = Math.max(d.min, d.ask - 5);
+    d.ask = na; if (d.rounds >= d.patience) { d.final = true; }
+    seq([say1, ['driver', fmt(pick(HG[kind.toLowerCase() + 'Ok'] || HG.muchOk), na)]]);
+  } else {
+    if (d.rounds >= d.patience) { d.final = true; d.ask = d.min; }
+    seq([say1, ['driver', pick(HG[kind.toLowerCase() + 'No'] || HG.muchNo)]]);
   }
-  chat('driver', fmt(pick(res.final ? HG.final : HG.counter), res.price) + ' ' + pick(HG.reasons));
-  setFareButtons(true);
 }
 function onNextAuto() {
-  if (FARE.rerolls >= 3 || FARE.deal) return;
-  FARE.rerolls++; chat('player', 'থাক মামা, অন্য অটো দেখি।'); showDriver();
+  if (FARE.busy || FARE.deal || FARE.idx >= MAX_DRIVERS - 1) return;
+  seq([['player', pick(HG.sayNext)], ['driver', pick(HG.leave)]], () => {
+    FARE.idx++; FARE.driver = FARE.drivers[FARE.idx]; S.stand.idx = FARE.idx; S.stand.state = 'walk'; S.stand.callT = 10;
+    $('offer').value = Math.max(10, FARE.driver.lo); updateOffer(); setFareButtons();
+  });
+}
+function onSkip() {
+  const d = FARE.driver; if (!d || d.gone || FARE.deal || FARE.busy) return;
+  seq([['player', pick(HG.sayGo)], ['driver', pick(HG.goOk)]], () => finishDeal(r5(rand(d.lo, d.ask0)), true));
 }
 
 /* ---------- tutorial, fullscreen, layout ---------- */
@@ -1164,7 +1296,7 @@ const TUT = () => {
     ['✋', 'সিট ধরো', t ? 'ডানদিকের সবুজ <b>✋ ধরো</b> বাটন চেপে ধরে রাখো। গর্তে পড়ার ঠিক আগে ধরো — নইলে ঝাঁকুনিতে ছিটকে পড়বে। ধরে রাখলে স্ট্যামিনা কমে!' : '<b>SPACE</b> চেপে ধরে রাখো। গর্তে পড়ার ঠিক আগে ধরো — নইলে ঝাঁকুনিতে ছিটকে পড়বে। ধরে রাখলে স্ট্যামিনা কমে!'],
     ['⚖️', 'ব্যালান্স', t ? 'বাঁয়ের <b>◀ ▶</b> বাটনে উল্টো দিকে কাত হয়ে ব্যালান্স রাখো। নিচের মিটার সবুজ অংশে রাখো।' : '<b>← →</b> (বা A / D) দিয়ে উল্টো দিকে কাত হয়ে ব্যালান্স রাখো। নিচের মিটার সবুজ অংশে রাখো।'],
     ['🐢', 'ধীরে মামা!', (t ? '<b>🐢 ধীরে</b> বাটন' : '<b>↓</b> (বা S)') + ' চেপে সামনের গাড়ি আর রাস্তা-পার-হওয়া মানুষের সাথে গুঁতা এড়াও। মানুষকে মারলে জনতা তাড়া করবে — তখন থেমো না!'],
-    ['💰', 'দরদাম', 'আগে অটোওয়ালার সাথে ভাড়া ঠিক করো। ন্যায্য ভাড়ার কাছাকাছি নামালে বাহবা, বেশি দিলে পকেট ফাঁকা। বৃষ্টিতে ভাড়া একটু বেশিই লাগে।']
+    ['💰', 'দরদাম', 'স্ট্যান্ডে মামার সাথে কথা বলে ভাড়া ঠিক করো — দর বলো, “গরিব মানুষ মামা” বা “এখনো বিয়ে করি নাই” বলে অনুরোধ করো। চাইলে ভাড়া না ঠিক করেই উঠে পড়তে পারো, কিন্তু নামার সময় কত লাগে কে জানে!']
   ];
 };
 let tutI = 0, tutDone = null;
@@ -1198,11 +1330,14 @@ function toggleFullscreen() {
     else goFullscreen();
   } catch (e) { /* ignore */ }
 }
+let rotSkipped = false;
 function layout() {
   resize();
   const b = document.body; if (!b || !b.classList) return;
   const touch = isTouch(), land = window.innerWidth >= window.innerHeight;
   b.classList.toggle('touch', touch); b.classList.toggle('land', land); b.classList.toggle('port', !land);
+  b.classList.toggle('riding', !!S && (S.mode === 'play' || S.mode === 'dying'));
+  b.classList.toggle('needrot', touch && !land && !rotSkipped && b.classList.contains('playing'));
   try { document.documentElement.style.setProperty('--stageBottom', cv.getBoundingClientRect().bottom + 'px'); } catch (e) { /* ignore */ }
 }
 
@@ -1234,11 +1369,14 @@ hold('bG', 'grip'); hold('bL', 'left'); hold('bR', 'right'); hold('bS', 'slow');
 $('startBtn').addEventListener('click', startGame);
 $('retryBtn').addEventListener('click', openFare);
 $('offerBtn').addEventListener('click', onOffer);
-$('payBtn').addEventListener('click', () => { const d = FARE.driver; if (!d || d.gone || FARE.deal) return; chat('player', 'ঠিক আছে মামা, ' + d.ask + ' টাকায় রাজি।'); finishDeal(d.ask); });
+$('payBtn').addEventListener('click', () => { const d = FARE.driver; if (!d || d.gone || FARE.deal || FARE.busy) return; const price = d.ask; seq([['player', pick(HG.sayAccept)], ['driver', pick(HG.accept)]], () => finishDeal(price)); });
+$('muchBtn').addEventListener('click', () => plead('Much'));
+$('poorBtn').addEventListener('click', () => plead('Poor'));
+$('stuBtn').addEventListener('click', () => plead('Student'));
+$('skipBtn').addEventListener('click', onSkip);
 $('nextBtn').addEventListener('click', onNextAuto);
-$('rideBtn').addEventListener('click', beginRide);
 $('offer').addEventListener('input', updateOffer);
-$('vehBtns').addEventListener('click', e => { const t = e.target; if (!t || !t.dataset || !t.dataset.v) return; FARE.vehicle = t.dataset.v; Array.from($('vehBtns').children).forEach(c => c.classList.toggle('on', c === t)); });
+$('genBtns').addEventListener('click', e => { const t = e.target; if (!t || !t.dataset || !t.dataset.g) return; FARE.gender = t.dataset.g; store.set('tm_gender', t.dataset.g); Array.from($('genBtns').children).forEach(c => c.classList.toggle('on', c === t)); });
 $('boardBtns').addEventListener('click', e => { const t = e.target; if (!t || !t.dataset || !t.dataset.b) return; FARE.boarding = t.dataset.b; Array.from($('boardBtns').children).forEach(c => c.classList.toggle('on', c === t)); });
 window.addEventListener('resize', layout); window.addEventListener('orientationchange', () => setTimeout(layout, 200));
 if (typeof ResizeObserver !== 'undefined') new ResizeObserver(layout).observe(cv);
@@ -1247,6 +1385,7 @@ $('tutNext').addEventListener('click', () => { if (tutI >= TUT().length - 1) end
 $('tutPrev').addEventListener('click', () => { if (tutI > 0) { tutI--; renderTut(); } });
 $('tutSkip').addEventListener('click', endTutorial);
 $('fsBtn').addEventListener('click', toggleFullscreen);
+$('rotSkip').addEventListener('click', () => { rotSkipped = true; layout(); });
 $('subsChk').addEventListener('change', e => { subsTouched = true; settings.subs = e.target.checked; });
 $('weatherBtns').addEventListener('click', e => { const t = e.target; if (!t || !t.dataset || !t.dataset.w) return; $('weatherSel').value = t.dataset.w; Array.from($('weatherBtns').children).forEach(c => c.classList.toggle('on', c === t)); });
 $('menuBtn').addEventListener('click', toMenu);
@@ -1256,10 +1395,12 @@ $('voiceChk').addEventListener('change', e => { settings.voice = e.target.checke
 /* ---------- boot ---------- */
 S = newState();
 const savedName = store.get('tm_name'); if (savedName) $('nameInput').value = savedName;
+FARE.gender = store.get('tm_gender') === 'f' ? 'f' : 'm';
+Array.from($('genBtns').children).forEach(c => c.classList.toggle('on', c.dataset && c.dataset.g === FARE.gender));
 const best = store.get('tm_best'); $('bestNote').textContent = best ? 'সর্বোচ্চ স্কোর: ' + best : '';
 requestAnimationFrame(frame);
 
 layout();
 // exposed for headless tests only
-window.__tm = { get S() { return S; }, update, render, startGame, beginRide, openFare, inp, FARE, BOARDINGS, newDriver, respond, finishDeal, resize, layout, updateWorld, hitPed, startWrong, AMB, NAMED };
+window.__tm = { get S() { return S; }, update, render, startGame, beginRide, openFare, inp, FARE, BOARDINGS, newDriver, respond, finishDeal, resize, layout, updateWorld, hitPed, startWrong, AMB, NAMED, standTick, plead, onOffer, onNextAuto, onSkip, SLOTS };
 })();

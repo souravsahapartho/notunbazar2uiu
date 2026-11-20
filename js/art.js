@@ -24,13 +24,29 @@ window.ART = function (E) {
     const col = o.col || FRAME[0], seed = o.seed || 1, t = o.t || 0, wa = o.wa || 0, pa = o.pa || 0;
     ctx.save(); ctx.translate(x, y); ctx.scale(sc, sc);
     ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.beginPath(); ctx.ellipse(0, 2, 92, 7, 0, 0, 7); ctx.fill();
-    spokeWheel(-46, -24, 24, wa); spokeWheel(62, -22, 22, wa);
+    if (o.cycle) { spokeWheel(-46, -24, 24, wa); spokeWheel(62, -22, 22, wa); } else { spokeWheel(-46, -22, 22, wa); spokeWheel(70, -17, 17, wa); }
+    if (!o.cycle) { // battery-powered auto-rickshaw ("Tesla"): motor chassis, front cowl, handlebar, driver bench
+      ctx.fillStyle = '#1f2937'; rr(-62, -27, 66, 11, 3); ctx.fill();
+      ctx.fillStyle = col; rr(-84, -33, 148, 7, 3); ctx.fill();
+      ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(6, -30); ctx.lineTo(10, -64); ctx.quadraticCurveTo(44, -70, 66, -58); ctx.lineTo(82, -42); ctx.lineTo(80, -30); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = '#fde047'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(14, -41); ctx.quadraticCurveTo(48, -49, 78, -39); ctx.stroke();
+      ctx.strokeStyle = col; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(70, -17, 21, Math.PI * 1.05, Math.PI * 1.95); ctx.stroke();
+      ctx.fillStyle = '#fef08a'; rr(78, -57, 8, 11, 3); ctx.fill();
+      ctx.fillStyle = '#d97706'; ctx.fillRect(8, -128, 4, 66); ctx.fillRect(60, -124, 4, 40);
+      ctx.fillStyle = col; rr(0, -132, 68, 8, 3); ctx.fill(); ctx.fillStyle = '#fde047'; ctx.fillRect(2, -125, 64, 2);
+      ctx.fillStyle = 'rgba(190,230,255,.38)'; ctx.beginPath(); ctx.moveTo(64, -124); ctx.lineTo(70, -66); ctx.lineTo(58, -66); ctx.lineTo(62, -124); ctx.fill();
+      ctx.strokeStyle = '#222'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(70, -34); ctx.lineTo(62, -64); ctx.lineTo(56, -94); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(50, -96); ctx.lineTo(64, -97); ctx.stroke();
+      ctx.fillStyle = '#3f2a1d'; rr(10, -72, 38, 8, 3); ctx.fill();
+    }
+    if (o.cycle) {
     // bicycle frame
     ctx.lineCap = 'round'; ctx.strokeStyle = col; ctx.lineWidth = 4; ctx.beginPath();
     ctx.moveTo(62, -22); ctx.lineTo(52, -62); ctx.moveTo(52, -62); ctx.lineTo(30, -60); ctx.moveTo(30, -60); ctx.lineTo(18, -28);
     ctx.moveTo(18, -28); ctx.lineTo(54, -34); ctx.moveTo(18, -28); ctx.lineTo(-46, -24); ctx.stroke();
     ctx.strokeStyle = '#222'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(52, -62); ctx.lineTo(50, -78); ctx.lineTo(61, -78); ctx.stroke();
     ctx.fillStyle = '#222'; rr(24, -66, 12, 5, 2); ctx.fill(); // saddle
+    }
     // carriage body with painted ovals
     ctx.fillStyle = col; rr(-80, -62, 88, 32, 5); ctx.fill();
     ctx.strokeStyle = '#fde047'; ctx.lineWidth = 1.5; rr(-78, -60, 84, 28, 4); ctx.stroke();
@@ -56,8 +72,20 @@ window.ART = function (E) {
       ctx.fillStyle = o.passCol || '#7c3aed'; rr(-52, -92, 18, 26, 5); ctx.fill();
       ctx.fillStyle = SKIN[1]; circle(-43, -100, 9); ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(-43, -103, 9, Math.PI, 0); ctx.fill();
     }
-    // puller
-    if (o.puller !== false) {
+    // seated driver of the battery rickshaw
+    if (!o.cycle && o.puller !== false) {
+      const hip = [28, -72], skin = o.skin || SKIN[0], shirt = o.shirt || '#f1e4c8';
+      ctx.lineCap = 'round'; ctx.strokeStyle = o.lungi || '#2563eb'; ctx.lineWidth = 8; ctx.beginPath(); ctx.moveTo(hip[0], hip[1]); ctx.lineTo(50, -68); ctx.lineTo(54, -37); ctx.stroke();
+      ctx.fillStyle = skin; circle(54, -33, 4.5);
+      ctx.fillStyle = shirt; rr(hip[0] - 9, hip[1] - 38, 20, 40, 7); ctx.fill();
+      ctx.strokeStyle = shirt; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(hip[0] + 3, hip[1] - 32); ctx.quadraticCurveTo(46, -92, 58, -96); ctx.stroke();
+      ctx.fillStyle = skin; circle(58, -96, 3.5);
+      ctx.fillStyle = skin; circle(hip[0] + 5, hip[1] - 50, 10);
+      if (o.mask) { ctx.fillStyle = '#e5f2ff'; rr(hip[0] + 6, hip[1] - 50, 9, 9, 2); ctx.fill(); }
+      if (o.cap) { ctx.fillStyle = o.cap; ctx.beginPath(); ctx.arc(hip[0] + 5, hip[1] - 53, 10, Math.PI, 0); ctx.fill(); ctx.fillRect(hip[0] + 8, hip[1] - 54, 12, 3); }
+    }
+    // puller (cycle version)
+    if (o.cycle && o.puller !== false) {
       const hip = [26, -64], crank = [18, -28], foot = [crank[0] + Math.cos(pa) * 12, crank[1] + Math.sin(pa) * 12];
       const knee = [(hip[0] + foot[0]) / 2 + 11, (hip[1] + foot[1]) / 2 - 2];
       const skin = o.skin || SKIN[0];
@@ -93,6 +121,7 @@ window.ART = function (E) {
     if (o.up) { ctx.fillStyle = o.skin || SKIN[0]; circle(9, -71, 3); circle(-4, -73, 3); }
     ctx.fillStyle = o.skin || SKIN[0]; circle(1, -66, 7.5);
     ctx.fillStyle = o.hair || '#111'; ctx.beginPath(); ctx.arc(1, -68, 7.5, Math.PI, 0); ctx.fill();
+    if (o.long) { ctx.fillStyle = '#111'; rr(-7, -68, 6, 28, 3); ctx.fill(); }
     if (o.bag) { ctx.fillStyle = o.bag; rr(-12, -56, 8, 20, 3); ctx.fill(); }
     if (o.umb) { ctx.fillStyle = o.umb; ctx.beginPath(); ctx.arc(2, -80, 22, Math.PI, 0); ctx.fill(); ctx.strokeStyle = '#222'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(2, -80); ctx.lineTo(2, -58); ctx.stroke(); }
     ctx.restore();
@@ -302,7 +331,7 @@ window.ART = function (E) {
     }
     ctx.fillStyle = '#0f766e'; ctx.beginPath(); ctx.moveTo(cx - 190, B - 200); ctx.quadraticCurveTo(cx, B - 292, cx + 200, B - 200); ctx.lineTo(cx + 200, B - 250); ctx.quadraticCurveTo(cx, B - 342, cx - 190, B - 250); ctx.closePath(); ctx.fill();
     ctx.strokeStyle = '#fde047'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(cx - 190, B - 250); ctx.quadraticCurveTo(cx, B - 342, cx + 200, B - 250); ctx.stroke();
-    txt('ভিটামিন গেট', cx + 5, B - 268, 38, '#fef08a', 'center', 700, '#064e3b');
+    txt('বিটুমিন গেট', cx + 5, B - 268, 38, '#fef08a', 'center', 700, '#064e3b');
     txt('VITAMIN GATE', cx + 5, B - 246, 14, '#d1fae5', 'center', 700);
     ctx.fillStyle = '#ef4444'; rr(cx - 28, B - 316, 56, 24, 12); ctx.fill(); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(cx + 4, B - 304, 12, -1.57, 1.57); ctx.fillRect(cx, B - 316, 4, 24); ctx.fill();
     for (let k = 0; k < 9; k++) { const lx = cx - 150 + k * 38, sag = Math.sin((k / 8) * Math.PI) * 10; ctx.strokeStyle = '#475569'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(lx, B - 222 - sag); ctx.lineTo(lx, B - 210 - sag); ctx.stroke(); ctx.fillStyle = k % 2 ? '#fde047' : '#fb923c'; circle(lx, B - 204 - sag, 5 + Math.sin(t * 4 + k) * .6); }

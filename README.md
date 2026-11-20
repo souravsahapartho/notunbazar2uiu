@@ -3,7 +3,7 @@
 A browser game about the bumpy auto-rickshaw ride from **Dhaka Natun Bazar → UIU**.
 Hold the seat, keep your balance, don't let "Tesla mama" bump into anyone, and reach campus alive.
 
-**Route:** Natun Bazar → Family Bazar → Sahebnagar → 10 Tola → Vitamin Gate → U-turn ("শেষ টেবিল") → Masjid Al Mustafa → **UIU**
+**Route:** Natun Bazar → Family Bazar → Sayed Nagar → 10 Tola → Bitumen Gate → U-turn ("শেষ টেবিল") → Masjid Al Mustafa → **UIU**
 
 ## Play
 
@@ -37,7 +37,7 @@ Fair fares live in `BOARDINGS` in `js/game.js`:
 | অফিস লাইন | ৳30–40 | ৳40–50 |
 | দশতলা | ৳30 | ৳30–40 |
 
-Drivers open high (৳60–80 on Natun Bazar, more in rain) and justify it ("ফাঁকা পড়ি", "বড়লোকের স্টুডেন্ট"); the student answers back automatically. About one driver in four is kind and takes the fair fare. Squeeze a greedy driver all the way down and he drives angrily fast; pay generously and he drives gently. Rain adds puddles and a wet-road tint. The অফিস লাইন boarding point is placed at Sahebnagar — change `at` if that is wrong.
+Drivers open high (৳60–80 on Natun Bazar, more in rain) and justify it ("ফাঁকা পড়ি", "বড়লোকের স্টুডেন্ট"); the student answers back automatically. About one driver in four is kind and takes the fair fare. Squeeze a greedy driver all the way down and he drives angrily fast; pay generously and he drives gently. Rain adds puddles and a wet-road tint. The অফিস লাইন boarding point is placed at Sayed Nagar — change `at` if that is wrong.
 
 ## Rules
 
@@ -68,9 +68,9 @@ Note: the death-notice scene is a fictional parody and is not an official notice
 
 - **Phone vs desktop:** phones get a touch pad (✋ ধরো / ◀ ▶ / 🐢 ধীরে) and auto-fullscreen in landscape; desktop uses SPACE, arrows and F for fullscreen.
 - **First-time tutorial** (skippable, re-open from the menu with ❓).
-- **Painted cycle-rickshaws** in traffic, parked at the Natun Bazar and Sahebnagar stands, some waiting at corners.
+- **Painted cycle-rickshaws** in traffic, parked at the Natun Bazar and Sayed Nagar stands, some waiting at corners.
 - **Street life:** named shops (চা জয়, bKash-style recharge shops with text signs only, pharmacies, biryani, furniture, garments), hawker clothes vans, flowers, overhead wires, pedestrians on the footpath.
-- **Risk:** pedestrians cross the road. Hit one and an angry crowd chases you (keep moving!). Wrong-side overtakes with oncoming traffic. Random jams near the Sahebnagar auto stand and Vitamin Gate.
+- **Risk:** pedestrians cross the road. Hit one and an angry crowd chases you (keep moving!). Wrong-side overtakes with oncoming traffic. Random jams near the Sayed Nagar auto stand and Bitumen Gate.
 - **Voices:** every character keeps one fixed browser Bangla voice (Web Speech API). Subtitles can be switched on/off. No third-party audio is used.
 - **End screen:** portrait phones show the condolence banners on top and score/buttons below; landscape and desktop show banners left and the card on the right.
 
@@ -80,3 +80,12 @@ Shop names and positions live in the `NAMED` list in `js/game.js`; they are styl
 
 - Pick **🚲 রিক্সা** in the menu to ride a painted cycle-rickshaw instead of the auto: slower, with its own fare range (guessed: Natun Bazar ৳60–80 dry, ৳90–120 rain).
 - Natun Bazar now has a Cha Joy-style outlet (generic look, text sign only), a bKash/Nagad agent, confectionery stores, tea tongs, "লাস্ট ফার্মা" pharmacy and the "পরাজয় হাসপাতাল" between Natun Bazar and Family Bazar. Edit `NAMED` in `js/game.js` to change names/positions.
+
+## Stand, voices & notices (latest)
+
+- **Single vehicle:** the painted battery-powered auto-rickshaw ("Tesla"); no separate cycle-rickshaw mode any more.
+- **Rickshaw stand:** you walk up to a jumble of 7 rickshaws, talk to the front driver by voice, answer with buttons (offer, "too much", "poor student", "haven't married yet", next rickshaw, or just get in and settle later), then climb in at the back.
+- **Voices:** Dhakaiya lines, short and sparse. Pick 👦/👧 in the menu; the student's voice follows it (needs a Bangla voice on the device — otherwise subtitles appear automatically).
+- **Phones:** a "rotate your phone" screen appears in portrait (can be skipped).
+- **Easier:** smaller jolts/damage, fewer road-crossers and wrong-side overtakes.
+- **On death:** two notices at UIU — শোকবার্তা and দোয়া প্রার্থনা (fictional, game satire).
