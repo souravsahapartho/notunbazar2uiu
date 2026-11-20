@@ -868,12 +868,16 @@ function drawVeh(v, o) {
     ctx.fillStyle = '#bfe6ff'; ctx.beginPath(); ctx.moveTo(-hw * .45, -54); ctx.lineTo(-hw * .27, -76); ctx.lineTo(hw * .3, -76); ctx.lineTo(hw * .5, -54); ctx.fill();
     ctx.fillStyle = '#fde68a'; ctx.fillRect(hw - 8, -44, 8, 8);
     wheel(-hw * .6, -16, 16, wa); wheel(hw * .6, -16, 16, wa);
-  } else if (v.type === 'bus') {
-    ctx.fillStyle = v.col; rr(-hw, -112, hw * 2, 96, 10); ctx.fill();
-    ctx.fillStyle = '#fff'; ctx.fillRect(-hw, -62, hw * 2, 8);
-    ctx.fillStyle = '#bfe6ff'; for (let k = 0; k < 8; k++) ctx.fillRect(-hw + 14 + k * ((hw * 2 - 70) / 8), -102, ((hw * 2 - 70) / 8) - 8, 32);
-    ctx.fillStyle = '#bfe6ff'; ctx.fillRect(hw - 44, -102, 36, 40);
-    ctx.fillStyle = '#fff'; txt('বাস সার্ভিস', -hw / 2, -32, 15, '#fff', 'center', 700);
+  } else if (v.type === 'bus') { // UIU shuttle bus: white AC coach, UIU blue/red livery
+    ctx.fillStyle = '#f8fafc'; rr(-hw, -112, hw * 2, 96, 10); ctx.fill();
+    ctx.fillStyle = '#0369a1'; ctx.fillRect(-hw, -58, hw * 2, 26);
+    ctx.fillStyle = '#e11d48'; ctx.fillRect(-hw, -62, hw * 2, 5); ctx.fillRect(-hw, -32, hw * 2, 4);
+    ctx.fillStyle = '#0c4a6e'; for (let k = 0; k < 8; k++) ctx.fillRect(-hw + 14 + k * ((hw * 2 - 70) / 8), -104, ((hw * 2 - 70) / 8) - 8, 34);
+    ctx.fillStyle = 'rgba(125,211,252,.55)'; for (let k = 0; k < 8; k++) ctx.fillRect(-hw + 14 + k * ((hw * 2 - 70) / 8), -104, ((hw * 2 - 70) / 8) - 8, 12);
+    ctx.fillStyle = '#0c4a6e'; ctx.fillRect(hw - 44, -104, 36, 42); ctx.fillStyle = 'rgba(125,211,252,.55)'; ctx.fillRect(hw - 44, -104, 36, 14);
+    txt('UIU SHUTTLE', -hw / 2 - 6, -40, 15, '#fff', 'center', 700);
+    txt('ইউআইইউ শাটল • AC', -hw / 2 - 6, -25, 9, '#fde68a', 'center', 700);
+    ctx.fillStyle = '#fde68a'; ctx.fillRect(hw - 8, -44, 8, 8);
     wheel(-hw * .65, -18, 20, wa); wheel(hw * .6, -18, 20, wa);
   } else if (v.type === 'rick') {
     A.rickshaw(0, 0, 1, { col: A.FRAME[Math.floor(v.seed) % 5], seed: v.seed, t: S.t, wa: S.t * (v.v + 1) * 2, pa: S.t * (v.stopped ? 0 : 7), puller: true, mask: v.seed > 50, cap: v.seed > 30 ? '#e5e7eb' : null, lungi: ['#2563eb', '#16a34a', '#b91c1c'][Math.floor(v.seed) % 3], shirt: '#f1e4c8', plate: v.seed > 60 ? 'সমাজখানা' : null, pass: v.seed > 70 });
