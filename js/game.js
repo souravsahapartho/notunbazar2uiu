@@ -1467,7 +1467,7 @@ $('voiceChk').addEventListener('change', e => { settings.voice = e.target.checke
 /* ---------- boot ---------- */
 S = newState();
 const savedName = store.get('tm_name'); if (savedName) $('nameInput').value = savedName;
-CTRL.mode = ['manual', 'tilt', 'auto'].includes(store.get('tm_ctrl')) ? store.get('tm_ctrl') : 'manual';
+CTRL.mode = ['manual', 'tilt', 'auto'].includes(store.get('tm_ctrl')) ? store.get('tm_ctrl') : (('ontouchstart' in window) || (navigator.maxTouchPoints > 0) ? 'auto' : 'manual'); // first visit: phones start on the easiest mode
 $('invChk').checked = store.get('tm_inv') === '1';
 Array.from($('ctrlBtns').children).forEach(c => c.classList.toggle('on', c.dataset.c === CTRL.mode));
 $('ctrlBtns').addEventListener('click', e => { const t = e.target; if (!t || !t.dataset || !t.dataset.c) return; CTRL.mode = t.dataset.c; store.set('tm_ctrl', CTRL.mode); Array.from($('ctrlBtns').children).forEach(c => c.classList.toggle('on', c === t)); if (CTRL.mode === 'tilt') enableTilt(); $('ctrlNote').textContent = CTRL_NOTE[CTRL.mode]; });
