@@ -17,7 +17,7 @@ resize();
 
 const PPM = 40;          // pixels per metre
 const GY = 492;          // ground line (near carriageway)
-const GYP = 440, PSC = .92, GYV = 466; // left-hand traffic: our carriageway is the far one (outer lane = rickshaws, inner lane = faster traffic); oncoming uses the two near lanes
+const GYP = 440, GYV = 466; // left-hand traffic: our carriageway is the far one (outer lane = rickshaws, inner lane = faster traffic); oncoming uses the two near lanes
 const SIDEY = 384;       // sidewalk top (building bases)
 const UNIT = 120;        // metres per route unit; the whole route is 20 units
 const GAPS = [3, 5, 2, 2, 3, 2, 3]; // Natun Bazar > Family > Sayed Nagar > 10 Tola > Bitumen Gate > Chef's Table > Masjid > UIU
@@ -38,9 +38,9 @@ STAGES.forEach((s, i) => s.at = SA[i]);
 const FINISH = SA[7] + 140;
 const LM = STAGES.map((s, i) => i < 7 ? SA[i] + 140 : FINISH + 8); // landmark centres (m)
 const UTURN_AT = SA[5] + 150;
-const LTURN_AT = SA[6] - 30; // left turn onto the Masjid / UIU road after the U-turn
-const LTURN_DUR = 3;
-const UTURN_DUR = 3.2;
+const LTURN_AT = LM[6] + 55; // just past the mosque: turn left onto the road to the UIU gate
+const LTURN_DUR = 4;
+const UTURN_DUR = 4.2;
 // fair fare ranges in taka: [low, high]. Edit freely.
 const BOARDINGS = [
   { id: 'natun',  bn: 'নতুন বাজার',     at: 0,                 dry: [50, 50], rain: [50, 70] },
@@ -48,6 +48,22 @@ const BOARDINGS = [
   { id: 'sayed',  bn: 'সাঈদ নগর',       at: SA[2] + 140 - 70, dry: [30, 40], rain: [40, 50] },
   { id: 'tola',   bn: 'দশতলা',          at: SA[3] + 140 - 70, dry: [30, 30], rain: [30, 40] }
 ];
+
+// Bangladesh drives on the left. Heading right (before the U-turn) we use the far carriageway; after the U-turn the
+// camera is on the other side, we head left and use the near carriageway. These give the lane the rickshaw is in.
+const ss = v => { v = Math.max(0, Math.min(1, v)); return v * v * (3 - 2 * v); };
+function PY() {
+  if (!S) return GYP;
+  if (S.uturn.state === 1 && S.dir > 0) return GYP + 74 * ss(S.uturn.t / UTURN_DUR / .5);
+  if (S.lturn.state === 1) { const p = S.lturn.t / LTURN_DUR; return p < .5 ? 514 + 70 * ss(p / .5) : GYP + 130 * (1 - ss((p - .5) / .5)); }
+  return S.dir > 0 ? GYP : 514;
+}
+function PS() {
+  if (!S) return .92;
+  if (S.uturn.state === 1 && S.dir > 0) return .92 + .12 * ss(S.uturn.t / UTURN_DUR / .5);
+  if (S.lturn.state === 1) { const p = S.lturn.t / LTURN_DUR; return p < .5 ? 1.04 + .3 * ss(p / .5) : .92 + .42 * (1 - ss((p - .5) / .5)); }
+  return S.dir > 0 ? .92 : 1.04;
+}
 
 /* ---------- helpers ---------- */
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -64,7 +80,9 @@ function rr(x, y, w, h, r) {
   ctx.lineTo(x + r, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - r);
   ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y); ctx.closePath();
 }
+let _txtFlip = false;
 function txt(s, x, y, size, color, align, weight, stroke) {
+  if (!_txtFlip && ctx.getTransform) { const m = ctx.getTransform(); if (m && m.a < 0) { _txtFlip = true; ctx.save(); ctx.translate(x, y); ctx.scale(-1, 1); txt(s, 0, 0, size, color, align, weight, stroke); ctx.restore(); _txtFlip = false; return; } }
   ctx.font = `${weight || 600} ${size}px ${FONT}`;
   ctx.textAlign = align || 'left'; ctx.textBaseline = 'alphabetic';
   if (stroke) { ctx.lineWidth = 4; ctx.strokeStyle = stroke; ctx.lineJoin = 'round'; ctx.strokeText(s, x, y); }
@@ -478,9 +496,8 @@ function update(dt) {
   }
   if (u.state === 1) {
     u.t += dt; const p = clamp(u.t / UTURN_DUR, 0, 1);
-    S.turnSx = Math.max(.06, Math.abs(Math.cos(Math.PI * p)));   // side view -> rear view -> side view
-    S.face = 1;
-    if (p >= .5 && !u.flipped) { u.flipped = true; S.side = 1; S.flash = 1; S.flashCol = '#fff'; S.banner = { text: '🎥 উল্টো ফুটপাত', sub: 'ক্যামেরা ঘুরে রাস্তার ওপাশ দেখাচ্ছে', t: .8 }; }
+    S.turnSx = Math.abs(Math.cos(Math.PI * p));   // side view -> head-on view -> side view the other way round
+    if (p >= .5 && !u.flipped) { u.flipped = true; S.side = 1; S.dir = -1; S.face = -1; S.flash = .7; S.flashCol = '#fff'; S.banner = { text: 'ইউ-টার্ন শেষ', sub: 'এখন মসজিদের দিকে, ডান থেকে বামে', t: .8 }; }
     if (p >= 1) { u.state = 2; S.turnSx = 1; S.score += 100; }
   }
 
@@ -489,12 +506,12 @@ function update(dt) {
   if (lt.state === 0 && u.state === 2 && S.dist >= LTURN_AT) {
     lt.state = 1; lt.t = 0; lt.sign = Math.random() < .5 ? -1 : 1; S.vehs = [];
     sfx.squeal(); say('driver', pick(L.lturn), { speak: true, force: true });
-    S.banner = { text: '⬅ বামে টার্ন!', sub: 'মসজিদ আর ইউআইইউ-র রাস্তা', t: 0 };
+    S.banner = { text: '⬅ বামে টার্ন!', sub: 'ইউআইইউ গেটের রাস্তা', t: 0 };
   }
   if (lt.state === 1) {
     lt.t += dt; const p = clamp(lt.t / LTURN_DUR, 0, 1);
-    S.turnSx = Math.max(.06, Math.abs(Math.cos(Math.PI * p))); S.face = 1;
-    if (p >= .5 && !lt.flipped) { lt.flipped = true; S.side = 2; S.flash = 1; S.flashCol = '#fff'; }
+    S.turnSx = Math.abs(Math.cos(Math.PI * p));
+    if (p >= .5 && !lt.flipped) { lt.flipped = true; S.side = 0; S.dir = 1; S.face = 1; S.flash = .7; S.flashCol = '#fff'; S.banner = { text: 'ভার্সিটি রোড', sub: 'সামনেই ইউআইইউ গেট', t: .8 }; }
     if (p >= 1) { lt.state = 2; S.turnSx = 1; S.score += 100; }
   }
 
@@ -554,7 +571,7 @@ function update(dt) {
       const wasGrip = S.gripping;
       jolt(mag); sfx[o.type === 'puddle' ? 'splash' : 'bump']();
       later(.28, () => jolt(mag * .6));
-      for (let i = 0; i < 12; i++) S.parts.push({ x: S.camX + 50 * S.face, y: GYP, vx: rand(-80, 120) * S.face, vy: rand(-220, -80), life: rand(.4, .8), col: o.type === 'puddle' ? '#9bd7ff' : '#b8a080', r: rand(2, 4) });
+      for (let i = 0; i < 12; i++) S.parts.push({ x: S.camX + 50 * S.face, y: PY(), vx: rand(-80, 120) * S.face, vy: rand(-220, -80), life: rand(.4, .8), col: o.type === 'puddle' ? '#9bd7ff' : '#b8a080', r: rand(2, 4) });
       if (wasGrip && mag > 1.4) later(.9, () => { if (S.mode === 'play' && Math.abs(S.a) < .5) { S.goodGrips++; S.score += 15; if (Math.random() < .35) say('driver', pick(L.goodGrip), { life: 1.8 }); } });
       if (Math.random() < .3 && S.bubbles.length < 3) say('player', pick(L.playerIdle), { speak: false, life: 2 });
     }
@@ -857,7 +874,7 @@ function drawLandmarkFront(i) {
 }
 function drawPeds() {
   for (const p of S.peds) {
-    const cx = X(p.x + .3), y = SIDEY + 20 + clamp(p.lat, 0, 1.3) * (GYP + 8 - SIDEY - 20);
+    const cx = X(p.x + .3), y = SIDEY + 20 + clamp(p.lat, 0, 1.3) * (PY() + 8 - SIDEY - 20);
     A.person(cx, p.hit ? y + 4 : y, 1.05, { shirt: p.shirt, pants: '#334155', skin: p.skin, ph: p.hit ? 0 : S.t * 7 + p.x, dir: S.dir, bag: p.bag, fall: p.hit, umb: S.rain ? p.umb : null });
     if (p.go && !p.hit && p.lat < .7) txt('!', cx, y - 92, 24, '#facc15', 'center', 700, '#000');
   }
@@ -865,12 +882,13 @@ function drawPeds() {
 function drawMob() {
   if (!S.mob) return;
   for (let k = 0; k < S.mob.n; k++) {
-    const mx = S.mob.x - (k % 4) * 1.1 - Math.floor(k / 4) * .6, cx = X(mx), y = GYP + 8 + (k % 3) * 8 - 8;
+    const mx = S.mob.x - (k % 4) * 1.1 - Math.floor(k / 4) * .6, cx = X(mx), y = PY() + 8 + (k % 3) * 8 - 8;
     A.person(cx, y, 1.05, { shirt: ['#dc2626', '#2563eb', '#16a34a', '#f59e0b'][k % 4], pants: '#334155', skin: ['#c68a5a', '#a86f45', '#d8a276'][k % 3], ph: S.t * 12 + k * 1.3, run: !S.mob.caught, up: true, dir: S.dir });
   }
 }
 function drawOnc() {
-  for (const o of S.onc) drawVeh(o, { fx: -1, sc: 1, dy: (Math.floor(o.seed) % 2) ? 36 : 10, fade: true });
+  const near = S.dir > 0;
+  for (const o of S.onc) { const l = Math.floor(o.seed) % 2; drawVeh(o, near ? { fx: -1, sc: 1, dy: l ? 36 : 10, fade: true } : { fx: -1, sc: .92, dy: l ? -52 : -26 }); }
 }
 
 function drawLandmark(i) {
@@ -917,9 +935,13 @@ function drawLandmark(i) {
       ctx.fillStyle = '#111'; for (let k = 0; k < 10; k++) ctx.fillRect(cx - 200 + k * 40, B - 12, 20, 12);
       ctx.fillStyle = '#ea580c'; rr(cx - 110, B - 250, 220, 56, 10); ctx.fill(); txt('↩ ইউ-টার্ন', cx, B - 212, 32, '#fff', 'center', 700);
       A.sheshTable(cx + 360, B);
-      A.avenue(cx + (LTURN_AT + 14 - LM[5]) * PPM * S.dir, B, 'মসজিদ ও ইউআইইউ রোড', 'বামে টার্ন', -1);
       break; }
-    case 6: A.mosque(cx, B); break;
+    case 6: { A.mosque(cx, B);
+      const sx = cx + (LTURN_AT - 40 - LM[6]) * PPM * S.dir; // overhead direction board for the left turn
+      ctx.fillStyle = '#475569'; ctx.fillRect(sx - 4, B - 150, 8, 150); ctx.fillStyle = '#15803d'; rr(sx - 100, B - 200, 200, 56, 8); ctx.fill();
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; rr(sx - 96, B - 196, 192, 48, 6); ctx.stroke();
+      txt('⬅ ইউআইইউ', sx, B - 170, 24, '#fff', 'center', 700); txt('ভার্সিটি রোড • বামে', sx, B - 153, 11, '#dcfce7', 'center', 700);
+      break; }
     case 7: A.uiu(cx, B); break;
   }
   ctx.restore();
@@ -949,6 +971,7 @@ function drawGround() {
   }
   // faded white lane dashes
   for (let m = Math.floor(S.dist - 30); m <= S.dist + 30; m += 4) { if (hash(m * 1.7) > .86) continue; ctx.fillStyle = 'rgba(232,232,222,' + (.42 + hash(m) * .25) + ')'; ctx.fillRect(X(m), 450, 90, 4); }
+  { const jx = X(LTURN_AT + 10); if (jx > -200 && jx < W + 200) { ctx.fillStyle = 'rgba(240,240,232,.8)'; for (let k = 0; k < 7; k++) ctx.fillRect(jx - 30 + k * 10, 486, 6, 54); ctx.fillStyle = 'rgba(230,230,220,.5)'; ctx.fillRect(jx - 40, 486, 2, 54); } } // junction stripes
   // dashed line between the two oncoming lanes, then the striped concrete median between the two carriageways
   for (let m = Math.floor(S.dist - 30); m <= S.dist + 30; m += 4) { if (hash(m * 2.3) > .88) continue; ctx.fillStyle = 'rgba(232,232,222,.5)'; ctx.fillRect(X(m), 506, 90, 4); }
   ctx.fillStyle = '#8e8a82'; ctx.fillRect(0, 472, W, 12); ctx.fillStyle = '#d9d6ce'; ctx.fillRect(0, 472, W, 6);
@@ -960,7 +983,7 @@ function drawRoadObjs() {
   for (const o of S.objs) {
     const x0 = X(o.x), x1 = X(o.x + o.w), cx = (x0 + x1) / 2, w = Math.abs(x1 - x0);
     if (cx < -300 || cx > W + 300) continue;
-    const y = GYP + 12;
+    const y = PY() + 12;
     if (o.type === 'pothole') {
       ctx.fillStyle = '#2a2d35'; ctx.beginPath(); ctx.ellipse(cx, y, w / 2, 14, 0, 0, 7); ctx.fill();
       ctx.strokeStyle = '#7a7f8c'; ctx.lineWidth = 2; ctx.stroke();
@@ -1050,43 +1073,45 @@ function drawAutoBody(sc, col, hw, wa) { // green CNG auto: black hood, caged si
 }
 
 /* the rickshaw seen from behind (mid U-turn) */
-function drawRickRear() {
+function drawRickFront() { // head-on view while the rickshaw swings round (U-turn, left turn)
   const fem = S.gender === 'f';
   ctx.save(); ctx.scale(1.12, 1.12);
   ctx.fillStyle = '#111'; rr(-44, -36, 14, 36, 5); ctx.fill(); rr(30, -36, 14, 36, 5); ctx.fill();
-  ctx.fillStyle = '#16a34a'; rr(-40, -86, 80, 60, 10); ctx.fill();
-  ctx.fillStyle = '#facc15'; ctx.fillRect(-40, -54, 80, 6); ctx.fillStyle = '#ef4444'; ctx.fillRect(-40, -48, 80, 3);
-  ctx.fillStyle = '#f472b6'; for (let k = 0; k < 5; k++) { ctx.beginPath(); ctx.arc(Math.cos(k * 1.256) * 7, -70 + Math.sin(k * 1.256) * 7, 5, 0, 7); ctx.fill(); }
-  ctx.fillStyle = '#fde047'; ctx.beginPath(); ctx.arc(0, -70, 4, 0, 7); ctx.fill();
-  ctx.fillStyle = '#fff'; rr(-19, -40, 38, 11, 3); ctx.fill(); txt('টেসলা', 0, -31, 8, '#166534', 'center', 700);
-  ctx.fillStyle = '#ef4444'; ctx.fillRect(-38, -66, 6, 9); ctx.fillRect(32, -66, 6, 9);
-  // driver (right) and passenger (left) seen from behind
-  ctx.fillStyle = '#f1e4c8'; rr(6, -108, 22, 28, 6); ctx.fill(); ctx.fillStyle = '#d6a77a'; ctx.beginPath(); ctx.arc(17, -116, 9, 0, 7); ctx.fill(); ctx.fillStyle = '#e5e7eb'; ctx.beginPath(); ctx.arc(17, -120, 9, Math.PI, 0); ctx.fill();
-  ctx.save(); ctx.translate(-20, -86); ctx.rotate(S.a * .6);
-  ctx.fillStyle = fem ? '#ec4899' : '#3b82f6'; rr(-11, -30, 22, 30, 6); ctx.fill();
-  if (fem) { ctx.fillStyle = '#111'; ctx.fillRect(-9, -30, 18, 34); }
-  ctx.fillStyle = '#e0b48a'; ctx.beginPath(); ctx.arc(0, -38, 10, 0, 7); ctx.fill(); ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(0, -38, 10, 0, 7); ctx.fill();
+  ctx.fillStyle = '#111'; rr(-6, -28, 12, 28, 4); ctx.fill(); // front wheel seen edge-on
+  ctx.fillStyle = '#1f2937'; rr(-40, -32, 80, 10, 3); ctx.fill();
+  ctx.fillStyle = '#16a34a'; rr(-36, -84, 72, 54, 10); ctx.fill();
+  ctx.fillStyle = '#facc15'; ctx.fillRect(-36, -58, 72, 6); ctx.fillStyle = '#ef4444'; ctx.fillRect(-36, -52, 72, 3);
+  ctx.fillStyle = '#e5e7eb'; rr(-17, -46, 34, 9, 3); ctx.fill(); txt('টেসলা', 0, -38.5, 7, '#166534', 'center', 700);
+  ctx.strokeStyle = '#374151'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-26, -92); ctx.lineTo(-18, -100); ctx.lineTo(18, -100); ctx.lineTo(26, -92); ctx.stroke(); // handlebar
+  ctx.fillStyle = '#f1e4c8'; rr(-13, -118, 26, 32, 7); ctx.fill(); // driver, facing us
+  ctx.fillStyle = '#d6a77a'; ctx.beginPath(); ctx.arc(0, -126, 9.5, 0, 7); ctx.fill();
+  ctx.fillStyle = '#e5e7eb'; ctx.beginPath(); ctx.arc(0, -130, 9.5, Math.PI, 0); ctx.fill();
+  ctx.fillStyle = '#111'; ctx.fillRect(-4.5, -127, 2, 2); ctx.fillRect(2.5, -127, 2, 2); ctx.fillRect(-3, -121, 6, 1.4);
+  ctx.fillStyle = '#d6a77a'; ctx.fillRect(-31, -104, 8, 6); ctx.fillRect(23, -104, 8, 6); // hands on the grips
+  ctx.save(); ctx.translate(-26, -92); ctx.rotate(S.a * .5); // passenger peeking out from behind the driver
+  ctx.fillStyle = fem ? '#ec4899' : '#3b82f6'; rr(-9, -22, 18, 24, 5); ctx.fill(); ctx.fillStyle = '#e0b48a'; ctx.beginPath(); ctx.arc(0, -30, 8, 0, 7); ctx.fill();
+  ctx.fillStyle = fem ? '#111' : '#1f2937'; ctx.beginPath(); ctx.arc(0, -33, 8, Math.PI, 0); ctx.fill();
   ctx.restore();
-  ctx.fillStyle = '#14532d'; ctx.fillRect(-38, -134, 3, 50); ctx.fillRect(35, -134, 3, 50);
-  ctx.fillStyle = '#15803d'; rr(-50, -142, 100, 14, 7); ctx.fill();
-  for (let k = 0; k < 8; k++) { ctx.fillStyle = ['#ef4444', '#fbbf24', '#f472b6', '#fff7ed', '#3b82f6', '#f97316'][k % 6]; ctx.fillRect(-46 + k * 11.8, -141, 9, 12); }
-  ctx.fillStyle = '#facc15'; for (let k = 0; k < 8; k++) ctx.fillRect(-46 + k * 12.6, -128, 3, 6);
+  ctx.fillStyle = '#14532d'; ctx.fillRect(-38, -150, 3, 62); ctx.fillRect(35, -150, 3, 62);
+  ctx.fillStyle = '#15803d'; rr(-50, -158, 100, 14, 7); ctx.fill();
+  for (let k = 0; k < 8; k++) { ctx.fillStyle = ['#ef4444', '#fbbf24', '#f472b6', '#fff7ed', '#3b82f6', '#f97316'][k % 6]; ctx.fillRect(-46 + k * 11.8, -157, 9, 12); }
   ctx.restore();
 }
-
 /* the player's auto */
 function drawAuto() {
   ctx.save();
-  const wy = S.wrong ? Math.sin(Math.PI * S.wrong.t / S.wrong.dur) * 50 : 0;
-  const lp = S.lturn.state === 1 ? Math.sin(Math.PI * clamp(S.lturn.t / LTURN_DUR, 0, 1)) : 0;
-  ctx.translate(S.camX, GYP + S.bobY + wy - lp * 36); ctx.scale(PSC * (1 - .14 * lp), PSC * (1 - .14 * lp));
-  ctx.rotate(S.tilt * S.face + (S.mode === 'dying' ? -.3 * clamp(S.deathT / .8, 0, 1) : 0));
+  const wy = S.wrong ? Math.sin(Math.PI * S.wrong.t / S.wrong.dur) * 50 * S.dir : 0;
+  const tn = S.uturn.state === 1 || S.lturn.state === 1;
+  ctx.translate(S.camX, PY() + S.bobY + wy); ctx.scale(PS(), PS());
+  ctx.rotate(S.tilt * S.face + (S.mode === 'dying' ? -.3 * clamp(S.deathT / .8, 0, 1) : 0) + (tn ? .05 * (1 - S.turnSx) * S.dir : 0));
   ctx.transform(1, 0, -clamp(S.a, -1, 1) * .07, 1, 0, 0); // faux-3D lean: the cab shears with the balance
-  const rear = (S.uturn.state === 1 || S.lturn.state === 1) && S.turnSx < .45;
-  ctx.scale(S.face * (rear ? 1 : S.turnSx), 1);
+  const sideA = tn ? clamp((S.turnSx - .22) / .3, 0, 1) : 1, frontA = tn ? 1 - sideA : 0;
+  ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(0, 4 - S.bobY, tn ? 52 + 38 * S.turnSx : 90, 8, 0, 0, 7); ctx.fill();
+  if (frontA > 0) { ctx.save(); ctx.globalAlpha = frontA; drawRickFront(); ctx.restore(); }
+  if (sideA <= 0) { ctx.restore(); return; }
+  ctx.globalAlpha = sideA;
+  ctx.scale(S.face * (tn ? Math.max(.12, S.turnSx) : 1), 1);
   const wa = S.wheel;
-  ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(0, 4 - S.bobY, rear ? 56 : 90, 8, 0, 0, 7); ctx.fill();
-  if (rear) { drawRickRear(); ctx.restore(); return; }
   const rick = true;
   A.rickshaw(0, 0, 1.12, { col: '#16a34a', seed: 12, t: S.t, wa: wa, puller: true, cap: '#e5e7eb', lungi: '#2563eb', shirt: '#f1e4c8', plate: 'ঢাকা-১২', name: 'টেসলা  TESLA' });
   if (!rick) {
@@ -1152,7 +1177,7 @@ function drawAuto() {
   ctx.fillStyle = '#fde68a'; ctx.fillRect(78, -48, 6, 8);
   } else { ctx.strokeStyle = S.gripping ? '#fde047' : '#9ca3af'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(-40, -101); ctx.lineTo(0, -101); ctx.stroke(); }
   ctx.restore();
-  txt(S.name, S.camX - S.face * 38, GYP - 164 + S.bobY, 14, '#fff', 'center', 700, 'rgba(0,0,0,.6)');
+  txt(S.name, S.camX - S.face * 38, PY() - 164 + S.bobY, 14, '#fff', 'center', 700, 'rgba(0,0,0,.6)');
 }
 
 function drawParts() {
@@ -1167,8 +1192,8 @@ function bubbleAnchor(b) {
     if (b.who === 'player') return { x: st.px, y: st.py - 104, c: '#3b82f6' };
     if (b.who === 'rick' && b.ref) return { x: b.ref.sx, y: b.ref.sy, c: '#16a34a' };
   }
-  if (b.who === 'driver') return { x: S.camX + S.face * 30, y: GYP - 138 + S.bobY, c: '#f59e0b' };
-  if (b.who === 'player') return { x: S.camX - S.face * 38, y: GYP - 180 + S.bobY, c: '#3b82f6' };
+  if (b.who === 'driver') return { x: S.camX + S.face * 30, y: PY() - 138 + S.bobY, c: '#f59e0b' };
+  if (b.who === 'player') return { x: S.camX - S.face * 38, y: PY() - 180 + S.bobY, c: '#3b82f6' };
   if (b.who === 'ped') return { x: b.ref ? X(b.ref.x) : W / 2, y: GY - 100, c: '#a855f7' };
   if (b.who === 'crowd') return { x: S.mob ? X(S.mob.x) : W / 2, y: GY - 110, c: '#b91c1c' };
   if (b.who === 'amb') return { x: b.ref ? X(b.ref.x) : W / 2, y: SIDEY - 40, c: '#0ea5e9' };
@@ -1263,7 +1288,7 @@ function drawScene() {
   for (let i = 0; i < 8; i++) drawLandmarkFront(i);
   drawRoadObjs();
   drawOnc();
-  S.vehs.forEach(v => drawVeh(v, { sc: .95, dy: GYV - GY }));
+  S.vehs.forEach(v => drawVeh(v, S.dir > 0 ? { sc: .95, dy: GYV - GY } : { sc: 1, dy: -4 }));
   drawPeds();
   if (S.mode === 'win' || S.dist >= FINISH - 4) {
     const fx = X(FINISH);
@@ -1440,7 +1465,7 @@ function seq(steps, done) {
     const next = () => { if (fired) return; fired = true; later(.25, () => run(i + 1)); };
     say(who, text, { speak: false, life: dur + .5 });
     const spoke = speak(text, who, true, next);
-    later(spoke ? text.length * .25 + 4 : dur, next);
+    later(spoke ? text.length * .14 + 3 : dur, next);
   };
   run(0);
 }

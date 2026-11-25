@@ -1,109 +1,68 @@
 # 🛺 মামা, শক্ত করে সিট ধরে বসেন!
-### "Mama, hold the seat tight!" — the Natun Bazar → UIU battery-rickshaw game
 
-> **The motto of the whole game: মামা, শক্ত করে সিট ধরে বসেন.** Hold the seat tight, or you fly off.
+A small browser game about the bumpy battery-rickshaw ride from Natun Bazar to UIU in Dhaka. You bargain the fare, hold the seat, and try not to fall off before the university gate.
 
-A funny, fast, fully responsive browser game about the bumpy **battery rickshaw** ride from **Dhaka's Natun Bazar to UIU**. Haggle the fare, hold the seat, dodge the traffic, and reach campus alive.
+**Play:** https://notunbazar2uiu.vercel.app
 
-**Live:** https://notunbazar2uiu.vercel.app  ·  **Stack:** plain HTML, CSS and vanilla JavaScript on one canvas. Production is built (minified and obfuscated) into `dist/` by `npm run build`.
+Plain HTML, CSS and vanilla JavaScript on one canvas. No framework, no runtime dependencies.
 
-**Route:** Natun Bazar → Family Bazar → Sayed Nagar → 10 Tola → Bitumen Gate → U-turn at Chef's Table → Masjid Al Mustafa → **UIU**
+## The ride
 
-## Features
+Natun Bazar → Family Bazar → Sayed Nagar → 10 Tola → Bitumen Gate → U-turn at Chef's Table → Masjid Al Mustafa → left turn → UIU gate.
 
-- 🗣️ **Spoken fare haggling.** Walk up to a jumble of rickshaws, talk to the front driver, and bargain with buttons. Or skip the haggling. Boarding points: Natun Bazar, Family Bazar, Sayed Nagar, 10 Tola.
-- 🎮 **Three control modes**, chosen in the menu:
-  - **Manual:** buttons or keyboard.
-  - **Tilt (ফোন হেলানো):** hold the phone like a steering wheel and turn it left/right to lean (works in any orientation). Tip the top edge toward you to grip and push it away to slow down. 🎯 recalibrates.
-  - **Easy balance (সহজ):** the game balances for you. Easiest, and the default on phones.
-- ➡️ **Lean cue.** An on-screen arrow shows which way to lean back.
-- 🔥 **Calm-ride combo** from x1 to x5, plus a ছেলে/মেয়ে choice with matching voices.
-- 💥 **Hard-crash drama:** a dying scream and a UIU mourning notice (শোকবার্তা and দোয়া প্রার্থনা) at the finish.
-- 🏙️ **A real-looking Dhaka street**, studied from road footage: continuous walls of mid-rise buildings with AC units, balconies, laundry, water tanks and bright rooftop boards; rolled-down shop shutters; tangled utility poles; footbridges and a distant flyover; an overcast sky; worn, cracked, patched asphalt with manholes and faded lane marks; and a black-and-white striped divider.
-- 🛺 **A detailed battery rickshaw:** tin-art side panel, ribbed painted hood with fringe and tassels, spoked wheels, and a driver with gamchha. The passenger has a backpack, bent knees on the footboard and two hands on the grab bar, and the cab shears slightly as you lose balance for a 2.5D feel.
-- 😡 **The student gets angrier with every bump**: polite ("আস্তে চালান") → sharp ("চোখে দেখেন না?") → furious. Several different rickshaw-mama, boy and girl voices.
-- 🏙️ **Shops.** Every shop has its own name (হাজি / নয়ন / মা বিরিয়ানি, আলকারিম রেস্টুরেন্ট, ফার্মেসি, টেলিকম with বিকাশ and নগদ boards), plus the Cha Joy outlet, the স্বপ্ন outlet, Last Pharma, the Porajoy hospital, tea tongs, hawker clothes vans and street life.
-- 📍 **Landmarks:** the Bitumen Gate boulevard, the Chef's Table food court, Masjid Al Mustafa with the road to UIU, and the UIU campus gate.
-- 🚌 **Traffic:** city buses in assorted colours, with roughly 1 bus in 10 being an orange **UIU shuttle**, plus rickshaws, CNGs and cars.
-- 🎥 **U-turn camera:** the camera swings round to a rear view of the rickshaw, then shows the opposite side of the road (different shops).
-- 🛣️ **Real junctions:** Bitumen Gate's boulevard and the road to UIU (left of Masjid Al Mustafa) branch off with curved kerbs, a zebra crossing, lamps and flanking buildings.
-- 🤬 **Street abuse lines** (mild Dhaka style), toggleable in the menu.
-- 📱 **Pro-game HUD:** small, round, translucent glass buttons that stay out of the way.
-- 📱 **Responsive on every screen.** It is tested on Pixel, iPhone, iPad and desktop sizes in portrait and landscape, with safe-area insets, a rotate prompt and fullscreen. On iPhone, use Add to Home Screen for fullscreen.
+The road is split into 20 equal units (3, 5, 2, 2, 3, 2, 3), so each stretch matches the real distance. Traffic keeps to the left like it does in Bangladesh: you ride in the outer lane, and the oncoming lanes are on the near side. After the U-turn the camera crosses over, you head back the other way, and a second left turn just past the mosque takes you onto the UIU road. The rickshaw you board is the one named "টেসলা / TESLA".
 
-## Controls
+## Playing
 
 | Mode | How |
 |------|-----|
-| Keyboard | `SPACE` hold = grip · `←` `→` / `A` `D` = lean · `↓` / `S` = slow · `M` = mute |
-| Touch (manual) | ◀ ▶ lean · ✋ grip · 🐢 slow |
-| Touch (easy) | ✋ grip · 🐢 slow only |
-| Tilt | Tilt left/right = lean · top edge toward you = grip · away = slow. Tick "↔ উল্টো" if directions feel reversed. |
+| Keyboard | Space (hold) = grip, ← → or A D = lean, ↓ or S = slow, M = mute |
+| Touch, manual | ◀ ▶ lean, ✋ grip, 🐢 slow |
+| Touch, easy | The game balances for you; only ✋ and 🐢 |
+| Tilt | Tilt the phone left or right to lean. Tip the top edge towards you to grip, away to slow |
 
-## Run locally
+Before the ride you can haggle with the driver in Bangla, or skip it. The passenger gets angrier with every bump, and the street has plenty to say about it (mild abuse lines can be switched off in the menu).
 
-```bash
-python3 -m http.server 8000   # then open http://localhost:8000
-```
-
-Deploy anywhere static: Vercel (import the repo, framework "Other"), or GitHub Pages (Settings → Pages → `main` / root).
-
-## Realistic voices (ElevenLabs voice pack)
-
-Browser text-to-speech cannot be trained, so by default every character sounds alike (the game only varies pitch and speed). For real voices, the game plays pre-rendered clips, and **every role has several different voices**: 5 rickshaw mamas, 3 boys, 3 girls, and 3 each for car, rickshaw, bus and CNG people. Each rickshaw mama keeps one voice for the whole ride; a new driver at the stand sounds different.
+## Run it locally
 
 ```bash
-export ELEVENLABS_API_KEY=...            # your own key
-python3 tools/design_voices.py           # creates the synthetic voices from text descriptions, saves ids to tools/voices.json
-node tools/dump_lines.js > tools/lines_dump.json
-python3 tools/gen_voices.py              # writes audio/*.mp3 + audio/manifest.json (one clip per line per voice)
-git add audio tools && git commit -m "Add voice pack" && git push
+python3 -m http.server 8000
 ```
 
-`gen_voices.py --limit 5` is a cheap trial. Without a pack, the game falls back to browser voices. **Do not clone real people** (for example, people interviewed in a TV clip) without their consent; designed or library voices are safe.
+Then open http://localhost:8000. To deploy, import the repo on Vercel (framework "Other"); it runs `npm run build` and serves `dist/`.
 
-## Project layout
+## Voices
 
-```
-index.html            menu, overlays, touch pad
-style.css             responsive layouts (portrait / landscape / desktop)
-js/game.js            game loop, physics, fare haggling, voices, rendering
-js/art.js             all drawn sprites: rickshaw, shops, landmarks, buses
-js/lines.js           every spoken Bangla line (including the escalating student anger)
-js/guard.js           host/frame guard
-tools/build.js        minify + obfuscate into dist/ (run by Vercel)
-tools/                voice design + voice-pack generator
-vercel.json           build config + security headers (CSP, frame blocking, permissions)
-manifest.webmanifest  installable / fullscreen on phones
+Every spoken line has a pre-recorded clip in `audio/`, so the game talks on any phone, even ones with no Bangla voice installed. The clips are made offline with eSpeak NG and ffmpeg:
+
+```bash
+python3 tools/gen_offline.py
 ```
 
-## Protection
+They sound plain. For richer voices there is an ElevenLabs pipeline: put your own key in `ELEVENLABS_API_KEY`, then run `tools/design_voices.py` once and `tools/gen_voices.py` after it. Please don't clone real people's voices.
 
-- Production serves only a **minified, obfuscated single bundle** (`npm run build` → `dist/`), a strict **Content-Security-Policy**, no framing, and the debug hook is exposed on localhost only. The game refuses to run on unofficial hosts or inside other sites' frames.
-- Honest limit: anything that runs in a browser can be copied by a determined person. To keep the readable source private, set the GitHub repo to **Private** (Settings → Danger zone); Vercel still deploys it.
-- Licence: all rights reserved. See `LICENSE`.
+## Layout
+
+```
+index.html           menu, overlays, touch pad
+style.css            portrait, landscape and desktop layouts
+js/game.js           loop, physics, fare talk, voices, drawing
+js/art.js            all the drawn sprites
+js/lines.js          every spoken line
+js/guard.js          host and frame check
+tools/               build script and voice tools
+audio/               voice clips and manifest
+vercel.json          security headers
+```
+
+## Security
+
+- The production bundle is minified and obfuscated, served with a strict Content-Security-Policy, no framing, HSTS and a locked-down Permissions-Policy. The debug hook only exists on localhost.
+- Anything that runs in a browser can be copied by someone determined. To keep the readable source private, set the GitHub repo to Private; Vercel can still deploy it.
+- Licence: all rights reserved (see `LICENSE`).
 
 ## Notes
 
-- Everything is a fictional, light-hearted parody. Shop names, notices and people are made up and are not real notices or real persons.
-- Landmark art is hand-drawn from public descriptions and is approximate.
-- Tilt sensor directions differ between phones. Real-device testing is welcome; open an issue.
+It is a light-hearted parody. Shop names, notices and characters are made up. The landmark art is hand-drawn and approximate. Phones report tilt differently, so if the direction feels reversed, tick "↔ উল্টো" in the menu or open an issue.
 
-Made by Sourav Saha (UIU CSE, Dhaka).
-
-## Latest changes
-
-- Lean hints ("lean left / lean right") appear only when playing with tilt controls.
-- Rickshaw driver now wears a checked lungi and a half-sleeve shirt; the headlight is gone (it is daytime and rickshaws have none).
-- New synthesised engine hum, tyre rumble, road hiss, rattles and a heavy thump on bumps.
-- The chasing mob is now a chorus of up to 11 overlapping voices with varied lines. Four crowd voice variants are supported by the ElevenLabs pipeline (`tools/design_voices.py`, `tools/gen_voices.py`).
-- Spoken lines no longer show as captions by default (subtitles can still be switched on).
-- Chajoy, Shwapno and Al Kareem outlets redrawn from photos, using text and colours only.
-
-## Route, lanes and turns
-
-- The route is split into 20 equal units, by real-life distance: Natun Bazar to Family Bazar 3, to Sayed Nagar 5, to 10 Tola 2, to Bitumen Gate 2, to Chef's Table 3, to Masjid Al Mustafa 2, to UIU 3. The strip at the top of the screen uses the same proportions. Change `GAPS` and `UNIT` in `js/game.js` to adjust.
-- Bangladeshi left-hand traffic: our rickshaw drives in the outer lane of the far carriageway (2 lanes, same direction); the two near lanes carry the oncoming traffic, with the median between them.
-- After the U-turn at Chef's Table there is a left turn onto the Masjid / UIU road (UIU is on the left); the rickshaw swings into it, seen from behind.
-- Our rickshaw is named "টেসলা / TESLA". Chef's Table is a park-style food court with a small football turf, floodlights, trees and benches.
-- Smoothness: rosette sprites are cached, and the canvas resolution adapts to the device (drops a little on slow phones, climbs back when there is headroom). Cruising speed is 2% gentler.
+Made by Sourav Saha, UIU CSE, Dhaka.

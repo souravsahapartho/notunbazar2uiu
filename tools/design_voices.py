@@ -5,7 +5,7 @@
   python3 tools/design_voices.py            # creates every missing variant
   python3 tools/design_voices.py --only driver
 
-These are synthetic voices invented from a description. Do NOT clone real people (e.g. interviewees in a TV clip) without their written consent.
+These voices are designed from a text description. Do NOT clone real people (e.g. interviewees in a TV clip) without their written consent.
 Listen to the previews in your ElevenLabs dashboard and swap any you dislike, then run tools/gen_voices.py.
 Request shapes follow ElevenLabs' public docs (text-to-voice/design, then text-to-voice); check them if the API has changed.
 """

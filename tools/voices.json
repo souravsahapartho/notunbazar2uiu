@@ -1,5 +1,5 @@
 {
-  "_help": "Each role has several voices (variants), so no two rickshaw mamas / students sound alike. Run tools/design_voices.py once to CREATE them from text descriptions (synthetic voices, no real person cloned), then tools/gen_voices.py.",
+  "_help": "Each role has several voices (variants), so no two rickshaw mamas / students sound alike. Run tools/design_voices.py once to CREATE them from text descriptions (designed voices, no real person cloned), then tools/gen_voices.py.",
   "provider": "elevenlabs",
   "elevenlabs": {
     "model": "eleven_multilingual_v2",

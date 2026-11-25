@@ -47,7 +47,7 @@ with sync_playwright() as p:
         if sk.is_visible(): sk.click()
         else:
             pg.evaluate("window.__tm.finishDeal(50,false)")
-        for _ in range(60):
+        for _ in range(160):
             if pg.evaluate("window.__tm.S.mode")=="play": break
             pg.wait_for_timeout(250)
         m = pg.evaluate("window.__tm.S.mode"); chk("play mode", m=="play", m)
