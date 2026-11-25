@@ -5,6 +5,7 @@
   node tools/dump_lines.js > tools/lines_dump.json
   python3 tools/gen_voices.py            # skips clips that already exist
   python3 tools/gen_voices.py --limit 5  # try a few first
+  python3 tools/gen_voices.py --variants 1 --chars 9000  # free plan: one voice per role, stays under the monthly quota
 
 Only use voices you are licensed to use (library/designed voices, or people who consented to cloning).
 The game falls back to browser TTS for any line missing from the manifest.
@@ -16,6 +17,11 @@ AUDIO = ROOT / "audio"; AUDIO.mkdir(exist_ok=True)
 cfg = json.load(open(ROOT / "tools/voices.json", encoding="utf8"))
 lines = json.load(open(ROOT / "tools/lines_dump.json", encoding="utf8"))
 limit = int(sys.argv[sys.argv.index("--limit") + 1]) if "--limit" in sys.argv else None
+# --chars N stops after about N characters (the free ElevenLabs plan allows roughly 10000 a month)
+budget = int(sys.argv[sys.argv.index("--chars") + 1]) if "--chars" in sys.argv else None
+# --variants N makes only the first N voices per role, so the budget covers every role
+maxvar = int(sys.argv[sys.argv.index("--variants") + 1]) if "--variants" in sys.argv else None
+spent = 0
 
 def fnv(s):  # must match fnv() in js/game.js (FNV-1a over UTF-8 bytes)
     h = 0x811c9dc5
@@ -52,12 +58,14 @@ mf_path = AUDIO / "manifest.json"
 manifest = json.load(open(mf_path)) if mf_path.exists() else {}
 done = 0
 for it in lines:
-  for var in range(NVAR.get(it["key"], 1)):          # one clip per voice variant: key#variant|text
+  for var in range(min(NVAR.get(it["key"], 1), maxvar or 99)):          # one clip per voice variant: key#variant|text
     h = fnv(f"{it['key']}#{var}|{it['text']}"); fn = f"{h}.mp3"
     if (AUDIO / fn).exists(): manifest[h] = fn; continue
+    if budget and spent + len(it["text"]) > budget: continue
     try: data = synth(it["key"], it["text"], var) if cfg["provider"] == "elevenlabs" else synth(it["key"], it["text"])
     except Exception as e: print("fail", it["key"], var, it["text"][:20], e); continue
     if not data: continue
+    spent += len(it["text"])
     (AUDIO / fn).write_bytes(data); manifest[h] = fn; done += 1; print("ok", it["key"], var, it["text"][:24])
     if limit and done >= limit: break
   if limit and done >= limit: break
