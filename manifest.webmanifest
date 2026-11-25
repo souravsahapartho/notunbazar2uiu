@@ -1,6 +1,6 @@
 {
-  "name": "টেসলা মামা: সিট ধরে রাখো!",
-  "short_name": "টেসলা মামা",
+  "name": "মামা, শক্ত করে সিট ধরে বসেন!",
+  "short_name": "সিট ধরে বসেন",
   "start_url": "./index.html",
   "display": "fullscreen",
   "orientation": "landscape",

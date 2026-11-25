@@ -1,27 +1,135 @@
 {
-  "_help": "Map each game voice key to a provider voice. Fill in voice ids from YOUR account. Keys: player_m/player_f = the student, driver = rickshaw mama, car/rick/bus/cng = road users, crowd, ped, hawker, tea, chop.",
+  "_help": "Each role has several voices (variants), so no two rickshaw mamas / students sound alike. Run tools/design_voices.py once to CREATE them from text descriptions (synthetic voices, no real person cloned), then tools/gen_voices.py.",
   "provider": "elevenlabs",
   "elevenlabs": {
     "model": "eleven_multilingual_v2",
     "voices": {
-      "driver":   { "voice_id": "PUT_ID_HERE", "stability": 0.35, "style": 0.6 },
-      "player_m": { "voice_id": "PUT_ID_HERE", "stability": 0.4,  "style": 0.5 },
-      "player_f": { "voice_id": "PUT_ID_HERE", "stability": 0.4,  "style": 0.5 },
-      "rick":     { "voice_id": "PUT_ID_HERE" },
-      "car":      { "voice_id": "PUT_ID_HERE" },
-      "bus":      { "voice_id": "PUT_ID_HERE" },
-      "cng":      { "voice_id": "PUT_ID_HERE" },
-      "crowd":    { "voice_id": "PUT_ID_HERE" },
-      "ped":      { "voice_id": "PUT_ID_HERE" }
+      "driver": [
+        {
+          "voice_id": "PUT_ID_HERE"
+        },
+        {
+          "voice_id": "PUT_ID_HERE"
+        },
+        {
+          "voice_id": "PUT_ID_HERE"
+        },
+        {
+          "voice_id": "PUT_ID_HERE"
+        },
+        {
+          "voice_id": "PUT_ID_HERE"
+        }
+      ],
+      "player_m": [
+        {
+          "voice_id": "PUT_ID_HERE"
+        },
+        {
+          "voice_id": "PUT_ID_HERE"
+        },
+        {
+          "voice_id": "PUT_ID_HERE"
+        }
+      ],
+      "player_f": [
+        {
+          "voice_id": "PUT_ID_HERE"
+        },
+        {
+          "voice_id": "PUT_ID_HERE"
+        },
+        {
+          "voice_id": "PUT_ID_HERE"
+        }
+      ],
+      "rick": [
+        {
+          "voice_id": "PUT_ID_HERE"
+        },
+        {
+          "voice_id": "PUT_ID_HERE"
+        },
+        {
+          "voice_id": "PUT_ID_HERE"
+        }
+      ],
+      "car": [
+        {
+          "voice_id": "PUT_ID_HERE"
+        },
+        {
+          "voice_id": "PUT_ID_HERE"
+        },
+        {
+          "voice_id": "PUT_ID_HERE"
+        }
+      ],
+      "bus": [
+        {
+          "voice_id": "PUT_ID_HERE"
+        },
+        {
+          "voice_id": "PUT_ID_HERE"
+        },
+        {
+          "voice_id": "PUT_ID_HERE"
+        }
+      ],
+      "cng": [
+        {
+          "voice_id": "PUT_ID_HERE"
+        },
+        {
+          "voice_id": "PUT_ID_HERE"
+        },
+        {
+          "voice_id": "PUT_ID_HERE"
+        }
+      ],
+      "crowd": {
+        "voice_id": "PUT_ID_HERE"
+      },
+      "ped": {
+        "voice_id": "PUT_ID_HERE"
+      }
     }
   },
   "azure": {
     "region": "southeastasia",
     "voices": {
-      "driver": "bn-BD-PradeepNeural", "player_m": "bn-IN-BashkarNeural", "player_f": "bn-BD-NabanitaNeural",
-      "rick": "bn-BD-PradeepNeural", "car": "bn-IN-BashkarNeural", "bus": "bn-BD-PradeepNeural",
-      "cng": "bn-IN-BashkarNeural", "crowd": "bn-BD-PradeepNeural", "ped": "bn-BD-NabanitaNeural"
+      "driver": "bn-BD-PradeepNeural",
+      "player_m": "bn-IN-BashkarNeural",
+      "player_f": "bn-BD-NabanitaNeural",
+      "rick": "bn-BD-PradeepNeural",
+      "car": "bn-IN-BashkarNeural",
+      "bus": "bn-BD-PradeepNeural",
+      "cng": "bn-IN-BashkarNeural",
+      "crowd": "bn-BD-PradeepNeural",
+      "ped": "bn-BD-NabanitaNeural"
     },
-    "styles": { "driver": { "rate": "+8%", "pitch": "-8%" }, "player_m": { "rate": "+4%", "pitch": "+6%" }, "car": { "rate": "+14%", "pitch": "-12%" } }
+    "styles": {
+      "driver": {
+        "rate": "+8%",
+        "pitch": "-8%"
+      },
+      "player_m": {
+        "rate": "+4%",
+        "pitch": "+6%"
+      },
+      "car": {
+        "rate": "+14%",
+        "pitch": "-12%"
+      }
+    }
+  },
+  "variants": {
+    "driver": 5,
+    "player_m": 3,
+    "player_f": 3,
+    "car": 3,
+    "rick": 3,
+    "bus": 3,
+    "cng": 3
   }
 }

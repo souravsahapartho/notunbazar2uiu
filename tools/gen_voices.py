@@ -23,8 +23,12 @@ def fnv(s):  # must match fnv() in js/game.js (FNV-1a over UTF-8 bytes)
         h = ((h ^ b) * 0x01000193) & 0xffffffff
     return f"{h:08x}"
 
-def eleven(key, text):
-    v = cfg["elevenlabs"]["voices"].get(key)
+NVAR = cfg.get("variants", {})   # how many different voices each role has (must match NVAR in js/game.js)
+
+def eleven(key, text, var=0):
+    vs = cfg["elevenlabs"]["voices"].get(key)
+    if isinstance(vs, list): vs = vs[var % len(vs)] if vs else None
+    v = vs
     if not v or v["voice_id"].startswith("PUT_"): return None
     body = {"text": text, "model_id": cfg["elevenlabs"]["model"],
             "voice_settings": {"stability": v.get("stability", .5), "similarity_boost": .8, "style": v.get("style", .3)}}
@@ -48,12 +52,14 @@ mf_path = AUDIO / "manifest.json"
 manifest = json.load(open(mf_path)) if mf_path.exists() else {}
 done = 0
 for it in lines:
-    h = fnv(f"{it['key']}|{it['text']}"); fn = f"{h}.mp3"
+  for var in range(NVAR.get(it["key"], 1)):          # one clip per voice variant: key#variant|text
+    h = fnv(f"{it['key']}#{var}|{it['text']}"); fn = f"{h}.mp3"
     if (AUDIO / fn).exists(): manifest[h] = fn; continue
-    try: data = synth(it["key"], it["text"])
-    except Exception as e: print("fail", it["key"], it["text"][:20], e); continue
+    try: data = synth(it["key"], it["text"], var) if cfg["provider"] == "elevenlabs" else synth(it["key"], it["text"])
+    except Exception as e: print("fail", it["key"], var, it["text"][:20], e); continue
     if not data: continue
-    (AUDIO / fn).write_bytes(data); manifest[h] = fn; done += 1; print("ok", it["key"], it["text"][:24])
+    (AUDIO / fn).write_bytes(data); manifest[h] = fn; done += 1; print("ok", it["key"], var, it["text"][:24])
     if limit and done >= limit: break
+  if limit and done >= limit: break
 json.dump(manifest, open(mf_path, "w"), indent=0)
 print(f"{done} new clips, {len(manifest)} in manifest")

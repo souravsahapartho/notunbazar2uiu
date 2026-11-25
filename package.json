@@ -1,0 +1,9 @@
+{
+  "name": "mamar-rickshaw-game",
+  "version": "1.0.0",
+  "private": true,
+  "description": "মামা, শক্ত করে সিট ধরে বসেন! — Natun Bazar to UIU battery-rickshaw game",
+  "license": "UNLICENSED",
+  "scripts": { "build": "node tools/build.js" },
+  "devDependencies": { "terser": "^5.31.0", "javascript-obfuscator": "^4.1.0" }
+}

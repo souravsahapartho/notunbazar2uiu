@@ -1,4 +1,4 @@
-/* টেসলা মামা: সিট ধরে রাখো! — Natun Bazar → UIU
+/* মামা, শক্ত করে সিট ধরে বসেন! — Natun Bazar → UIU
    Plain canvas game, no build step. */
 (() => {
 'use strict';
@@ -151,9 +151,11 @@ const VP = {
   cng: { g: 'm', p: .8, r: 1.05 }, crowd: { g: 'm', p: .6, r: 1.12 }, ped: { g: 'f', p: 1.2, r: 1.05 }, hawker: { g: 'm', p: .95, r: 1.15 },
   tea: { g: 'm', p: .9, r: 1.05 }, chop: { g: 'm', p: .78, r: 1.1 }
 };
+const VTUNE = { driver: [[0, 1], [.12, 1.1], [-.14, .9], [.2, 1.04], [-.05, 1.18]], player_m: [[0, 1], [.1, 1.08], [-.12, .96]], player_f: [[0, 1], [.12, 1.06], [-.1, .94]], any: [[0, 1], [.14, 1.08], [-.12, .94]] };
 function profOf(key) {
-  if (key === 'player') return FARE.gender === 'f' ? { g: 'f', p: 1.12, r: 1.04 } : { g: 'm', p: .98, r: 1.06 };
-  return VP[key] || VP.driver;
+  const base = key === 'player' ? 'player_' + FARE.gender : key, tune = (VTUNE[base] || VTUNE.any)[varOf(key) % (VTUNE[base] || VTUNE.any).length];
+  const p0 = key === 'player' ? (FARE.gender === 'f' ? { g: 'f', p: 1.12, r: 1.04 } : { g: 'm', p: .98, r: 1.06 }) : (VP[key] || VP.driver);
+  return { g: p0.g, p: Math.max(.1, p0.p + tune[0]), r: p0.r * tune[1] };
 }
 function voiceKey(who, ref) {
   if (who === 'other') return (ref && ref.type) || 'car';
@@ -174,10 +176,20 @@ function fnv(str) {
   for (const x of b) { h ^= x; h = Math.imul(h, 0x01000193) >>> 0; }
   return h.toString(16).padStart(8, '0');
 }
-const packKey = key => key === 'player' ? 'player_' + FARE.gender : key;
+// several different voices per role, so no two rickshaw mamas (or students) sound alike
+const NVAR = { driver: 5, player_m: 3, player_f: 3, car: 3, rick: 3, bus: 3, cng: 3 };
+let curRef = null;
+function varOf(key) {
+  const base = key === 'player' ? 'player_' + FARE.gender : key, n = NVAR[base] || 1;
+  if (base === 'driver') return (FARE.driver && FARE.driver.vi) % n || 0;
+  if (base.startsWith('player_')) return (FARE.pv || 0) % n;
+  return Math.floor((curRef && curRef.seed || 0)) % n;
+}
+const packKey = key => (key === 'player' ? 'player_' + FARE.gender : key) + '#' + varOf(key);
+const packBase = key => key === 'player' ? 'player_' + FARE.gender : key;
 function playPack(text, key, cb) {
   if (typeof Audio === 'undefined' || typeof TextEncoder === 'undefined') return false;
-  const f = PACK.map[fnv(packKey(key) + '|' + text)]; if (!f) return false;
+  const f = PACK.map[fnv(packKey(key) + '|' + text)] || PACK.map[fnv(packBase(key) + '|' + text)]; if (!f) return false;
   try {
     if (PACK.cur) PACK.cur.pause();
     const a = new Audio('audio/' + f); PACK.cur = a; a.onended = a.onerror = () => { if (cb) cb(); };
@@ -260,11 +272,19 @@ function say(who, text, opts) {
   const b0 = { who, text, t: 0, life: opts.life || 2.8, ref: opts.ref || null, silent: false };
   S.bubbles.push(b0);
   if (S.bubbles.length > 5) S.bubbles.shift();
+  curRef = opts.ref || null;
   if (opts.speak !== false && !speak(text, voiceKey(who, opts.ref), opts.force)) b0.silent = true;
+  curRef = null;
 }
 function later(t, fn) { S.pend.push({ t, fn }); }
 function jolt(mag, sign) {
   if (mag >= 2 && S.mode === 'play' && S.t - (S.lastHard || -99) > 9 && S.life > 12) { S.lastHard = S.t; say('player', pick(L.hardHit), { speak: true, force: true, life: 2.4 }); }
+  else if (mag >= 1 && S.mode === 'play' && S.t - (S.lastAngry || -99) > 5) { // the student gets angrier with every bump: polite, then sharp, then furious
+    S.annoy = Math.max(0, (S.annoy || 0) - (S.t - (S.annoyT || 0)) * .05) + 1; S.annoyT = S.t; S.lastAngry = S.t;
+    const tier = Math.min(4, Math.floor(S.annoy));
+    const pool = tier >= 4 && settings.abuse ? L.abuse : (L.angry[Math.min(tier, 4) - 1] || L.angry[0]);
+    say('player', pick(pool), { speak: true, force: true, life: 2.4 });
+  }
   sign = sign || (Math.random() < .5 ? -1 : 1);
   S.va += sign * mag * .55 * (S.gripping ? .32 : 1);
   S.bobV -= 60 * Math.min(1.5, mag);
@@ -294,6 +314,7 @@ function spawnVeh(x) {
 
 /* ---------- game flow ---------- */
 function startGame() { // menu -> haggle screen
+  FARE.pv = Math.floor(Math.random() * 3);
   audioInit();
   FARE.name = ($('nameInput').value || '').trim() || 'বন্ধু';
   store.set('tm_name', FARE.name);
@@ -359,7 +380,7 @@ function finishUi(won) {
   $('endTitle').textContent = won
     ? `🎓 ${S.name}, ইউআইইউতে পৌঁছে গেছ!` : `💀 ${S.name} আর নেই…`;
   let rating = '';
-  if (won) rating = S.score > 6500 ? 'রেটিং: ⭐⭐⭐ টেসলা-মাস্টার!' : S.score > 4500 ? 'রেটিং: ⭐⭐ পাকা যাত্রী' : 'রেটিং: ⭐ কোনোমতে টিকে গেছ';
+  if (won) rating = S.score > 6500 ? 'রেটিং: ⭐⭐⭐ সিট-মাস্টার!' : S.score > 4500 ? 'রেটিং: ⭐⭐ পাকা যাত্রী' : 'রেটিং: ⭐ কোনোমতে টিকে গেছ';
   $('endBody').innerHTML = '<table>' + rows.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join('') + '</table>' +
     (rating ? `<p>${rating}</p>` : `<p>মৃত্যুস্থান: ${placeOf(S.deathStage)}</p>`);
   $('end').classList.remove('hidden');
@@ -569,7 +590,7 @@ function updateWorld(dt) {
       S.jamDone[idx] = true;
       if (S.jams[idx] && at0 < at - 70) {
         for (let k = 0; k < 6; k++) { const type = pick(['car', 'cng', 'rick', 'car', 'bus']), d = VT[type]; S.vehs.push({ type, x: S.dist + 26 + k * 8, len: d.len, v: rand(1.5, 3), stopped: false, wrongSide: false, hit: false, leaving: false, yoff: 0, tail: 0, exit: S.clock + rand(9, 15), col: pick(VCOL), seed: Math.random() * 100 }); }
-        S.banner = { text: '🚦 জ্যাম!', sub: idx === 2 ? 'অটো স্ট্যান্ডের মোড়' : 'বিটুমিন গেটের সামনে', t: 0 };
+        S.banner = { text: '🚦 জ্যাম!', sub: idx === 2 ? 'রিক্সা স্ট্যান্ডের মোড়' : 'বিটুমিন গেটের সামনে', t: 0 };
         say('driver', pick(L.jam), { force: true, life: 2.6 });
       }
     }
@@ -976,7 +997,7 @@ function drawRickRear() {
   ctx.fillStyle = '#facc15'; ctx.fillRect(-40, -54, 80, 6); ctx.fillStyle = '#ef4444'; ctx.fillRect(-40, -48, 80, 3);
   ctx.fillStyle = '#f472b6'; for (let k = 0; k < 5; k++) { ctx.beginPath(); ctx.arc(Math.cos(k * 1.256) * 7, -70 + Math.sin(k * 1.256) * 7, 5, 0, 7); ctx.fill(); }
   ctx.fillStyle = '#fde047'; ctx.beginPath(); ctx.arc(0, -70, 4, 0, 7); ctx.fill();
-  ctx.fillStyle = '#fff'; rr(-19, -40, 38, 11, 3); ctx.fill(); txt('টেসলা', 0, -31, 8, '#166534', 'center', 700);
+  ctx.fillStyle = '#fff'; rr(-19, -40, 38, 11, 3); ctx.fill(); txt('মামা-১২', 0, -31, 8, '#166534', 'center', 700);
   ctx.fillStyle = '#ef4444'; ctx.fillRect(-38, -66, 6, 9); ctx.fillRect(32, -66, 6, 9);
   // driver (right) and passenger (left) seen from behind
   ctx.fillStyle = '#f1e4c8'; rr(6, -108, 22, 28, 6); ctx.fill(); ctx.fillStyle = '#d6a77a'; ctx.beginPath(); ctx.arc(17, -116, 9, 0, 7); ctx.fill(); ctx.fillStyle = '#e5e7eb'; ctx.beginPath(); ctx.arc(17, -120, 9, Math.PI, 0); ctx.fill();
@@ -998,13 +1019,14 @@ function drawAuto() {
   const wy = S.wrong ? -Math.sin(Math.PI * S.wrong.t / S.wrong.dur) * 46 : 0;
   ctx.translate(S.camX, GY + S.bobY + wy);
   ctx.rotate(S.tilt * S.face + (S.mode === 'dying' ? -.3 * clamp(S.deathT / .8, 0, 1) : 0));
+  ctx.transform(1, 0, -clamp(S.a, -1, 1) * .07, 1, 0, 0); // faux-3D lean: the cab shears with the balance
   const rear = S.uturn.state === 1 && S.turnSx < .45;
   ctx.scale(S.face * (rear ? 1 : S.turnSx), 1);
   const wa = S.wheel;
   ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(0, 4 - S.bobY, rear ? 56 : 90, 8, 0, 0, 7); ctx.fill();
   if (rear) { drawRickRear(); ctx.restore(); return; }
   const rick = true;
-  A.rickshaw(0, 0, 1.12, { col: '#16a34a', seed: 12, t: S.t, wa: wa, puller: true, cap: '#e5e7eb', lungi: '#2563eb', shirt: '#f1e4c8', plate: 'টেসলা' });
+  A.rickshaw(0, 0, 1.12, { col: '#16a34a', seed: 12, t: S.t, wa: wa, puller: true, cap: '#e5e7eb', lungi: '#2563eb', shirt: '#f1e4c8', plate: 'মামা-১২' });
   if (!rick) {
   // seats
   ctx.fillStyle = '#7f1d1d'; ctx.fillRect(-70, -74, 70, 12); ctx.fillRect(-74, -112, 8, 40);
@@ -1020,30 +1042,43 @@ function drawAuto() {
   ctx.strokeStyle = '#222'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(34, -92); ctx.lineTo(50, -80); ctx.stroke();
   ctx.fillStyle = '#d6a77a'; ctx.beginPath(); ctx.arc(34, -92, 4, 0, 7); ctx.fill();
   }
-  // passenger
+  // passenger: seated on the bench, backpack on, knees bent onto the footboard, both hands on the grab bar
   const dying = S.mode === 'dying', du = dying ? clamp(S.deathT / 1.3, 0, 1) : 0;
   const th = S.a * .6 + du * 5.5, hipx = -38 - du * 150, hipy = Math.min(-8, -72 - du * 150 + du * du * 230);
+  const fem = S.gender === 'f', skin = '#e0b48a', scared = Math.abs(S.a) > .55 || S.recover > 0 || dying, shirt = fem ? '#ec4899' : '#3b82f6';
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  if (!dying) { // thighs and shins follow the body but the feet stay planted on the footboard
+    const kx = hipx + 24 + S.a * 4, ky = hipy - 1 + Math.sin(S.t * 8) * (S.gripping ? .5 : 2), fx = hipx + 34 + (S.gripping ? 0 : Math.sin(S.t * 6) * 3), fy = -30;
+    ctx.strokeStyle = fem ? '#1e293b' : '#334155'; ctx.lineWidth = 10; ctx.beginPath(); ctx.moveTo(hipx, hipy - 2); ctx.lineTo(kx, ky); ctx.lineTo(fx, fy); ctx.stroke();
+    ctx.fillStyle = '#f8fafc'; rr(fx - 4, fy - 3, 17, 8, 3); ctx.fill(); ctx.fillStyle = '#ef4444'; ctx.fillRect(fx - 4, fy + 3, 17, 2);
+  }
   ctx.save(); ctx.translate(hipx, hipy); ctx.rotate(th);
-  const fem = S.gender === 'f';
-  ctx.fillStyle = fem ? '#ec4899' : '#3b82f6'; rr(-10, -40, 20, 40, 5); ctx.fill();
-  ctx.fillStyle = fem ? '#a855f7' : '#f59e0b'; ctx.fillRect(-14, -36, 6, 26);
-  if (fem) { ctx.fillStyle = '#111'; ctx.fillRect(-14, -58, 7, 40); }
-  ctx.fillStyle = '#e0b48a'; ctx.beginPath(); ctx.arc(0, -52, 12, 0, 7); ctx.fill();
-  ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(0, -56, 12, Math.PI, 0); ctx.fill();
-  const scared = Math.abs(S.a) > .55 || S.recover > 0;
-  ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(4, -52, scared ? 2.6 : 1.8, 0, 7); ctx.arc(-3, -52, scared ? 2.6 : 1.8, 0, 7); ctx.fill();
-  ctx.beginPath(); if (scared) ctx.ellipse(1, -45, 3, 4.5, 0, 0, 7); else ctx.arc(1, -46, 3, 0, Math.PI);
-  scared ? ctx.fill() : ctx.stroke();
+  ctx.fillStyle = fem ? '#7c3aed' : '#f59e0b'; rr(-21, -38, 13, 29, 4); ctx.fill(); ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.fillRect(-21, -24, 13, 2); ctx.fillStyle = '#fde68a'; ctx.fillRect(-18, -34, 7, 3);
+  const tg = ctx.createLinearGradient(-10, 0, 10, 0); tg.addColorStop(0, shirt); tg.addColorStop(1, fem ? '#be185d' : '#1d4ed8');
+  ctx.fillStyle = tg; rr(-10, -42, 20, 43, 6); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,.22)'; rr(-8, -40, 4, 36, 2); ctx.fill();
+  ctx.fillStyle = '#f8fafc'; ctx.beginPath(); ctx.moveTo(-4, -42); ctx.lineTo(4, -42); ctx.lineTo(0, -35); ctx.fill();
+  ctx.fillStyle = skin; ctx.fillRect(-3, -47, 7, 7);
+  if (fem) { ctx.fillStyle = '#111'; ctx.beginPath(); ctx.moveTo(-5, -62); ctx.quadraticCurveTo(-20 - Math.sin(S.t * 6) * 3, -44, -14 + Math.sin(S.t * 5) * 3, -20); ctx.lineTo(-4, -30); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'rgba(244,114,182,.75)'; ctx.beginPath(); ctx.moveTo(-8, -40); ctx.quadraticCurveTo(-24 - Math.sin(S.t * 7) * 4, -34, -26 + Math.sin(S.t * 6) * 4, -18); ctx.lineTo(-10, -30); ctx.fill(); } // dupatta
+  ctx.fillStyle = skin; ctx.beginPath(); ctx.arc(1, -55, 11.5, 0, 7); ctx.fill();
+  ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(0, -58, 11.5, Math.PI * .95, Math.PI * 2.05); ctx.fill(); if (!fem) ctx.fillRect(-11, -60, 6, 8);
+  ctx.fillStyle = '#c99a6e'; ctx.beginPath(); ctx.arc(-3, -54, 2.6, 0, 7); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(6, -55, scared ? 3.4 : 2.6, 0, 7); ctx.fill(); ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(7, -55, scared ? 1.7 : 1.4, 0, 7); ctx.fill();
+  ctx.strokeStyle = '#111'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(3, scared ? -62 : -59); ctx.lineTo(9, scared ? -63 : -59.5); ctx.stroke();
+  ctx.fillStyle = '#7f1d1d'; ctx.beginPath(); if (scared) ctx.ellipse(4, -47, 2.8, 4, 0, 0, 7); else ctx.ellipse(4, -47.5, 3, 1.4, 0, 0, Math.PI); ctx.fill();
   ctx.restore();
-  // arms
+  // arms: sleeve to the elbow, skin below; both hands on the grab bar when gripping
   const shx = hipx + 32 * Math.sin(th), shy = hipy - 32 * Math.cos(th);
-  const rail = [-14, -101];
-  ctx.lineCap = 'round';
+  ctx.strokeStyle = S.gripping ? '#fde047' : '#9ca3af'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(-40, -101); ctx.lineTo(0, -101); ctx.stroke();
   for (let k = 0; k < (dying ? 0 : 2); k++) {
-    const hx = S.gripping ? rail[0] + k * 14 : shx + 16 + Math.sin(S.t * 9 + k * 2) * 12 + k * 8;
-    const hy = S.gripping ? rail[1] : shy - 6 + Math.cos(S.t * 11 + k) * 14;
-    ctx.strokeStyle = '#e0b48a'; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(shx, shy); ctx.quadraticCurveTo((shx + hx) / 2 + 8, (shy + hy) / 2 - 6, hx, hy); ctx.stroke();
-    if (S.gripping) { ctx.fillStyle = '#fde047'; ctx.beginPath(); ctx.arc(hx, hy, 6, 0, 7); ctx.fill(); }
+    const hx = S.gripping ? -28 + k * 22 : shx + 16 + Math.sin(S.t * 9 + k * 2) * 12 + k * 8;
+    const hy = S.gripping ? -101 : shy - 6 + Math.cos(S.t * 11 + k) * 14;
+    const ex = (shx + hx) / 2 - 5 + k * 4, ey = (shy + hy) / 2 + 11 + (S.gripping ? 0 : Math.sin(S.t * 7 + k) * 4);
+    ctx.strokeStyle = shirt; ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(shx, shy); ctx.lineTo(ex, ey); ctx.stroke();
+    ctx.strokeStyle = skin; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(ex, ey); ctx.lineTo(hx, hy); ctx.stroke();
+    ctx.fillStyle = skin; ctx.beginPath(); ctx.arc(hx, hy, S.gripping ? 5.4 : 4, 0, 7); ctx.fill();
+    if (S.gripping) { ctx.strokeStyle = 'rgba(120,53,15,.7)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(hx, hy, 5.4, 0, 7); ctx.stroke(); }
   }
   // rail + canopy (drawn after so arms look like they grip)
   if (!rick) {
@@ -1305,7 +1340,7 @@ function newDriver(b, rain) {
   const ask = kind ? hi : r5(hi + (rain ? rand(15, 30) : rand(10, 20)));
   const min = kind ? lo : r5(rand(lo, hi + 5));
   return {
-    lo, hi, kind, ask, ask0: ask, min: Math.min(min, ask), rounds: 0, patience: 4, final: false, gone: false,
+    vi: Math.floor(Math.random() * NVAR.driver), lo, hi, kind, ask, ask0: ask, min: Math.min(min, ask), rounds: 0, patience: 4, final: false, gone: false,
     look: { col: pick(A.FRAME), seed: Math.random() * 100, skin: pick(['#c68a5a', '#a86f45', '#d8a276']), cap: Math.random() < .5 ? '#e5e7eb' : null, mask: Math.random() < .3, lungi: pick(['#2563eb', '#16a34a', '#b91c1c', '#7c3aed']), shirt: pick(['#f1e4c8', '#cbd5e1', '#fde68a', '#bbf7d0']) }
   };
 }
@@ -1419,7 +1454,7 @@ function drawStand() {
   const order = SLOTS.map((_, i) => i).sort((a, b) => SLOTS[a].y - SLOTS[b].y);
   for (const i of order) {
     const sl = SLOTS[i], d = FARE.drivers[i], lk = d.look;
-    A.rickshaw(sl.x, sl.y, sl.sc, { col: lk.col, seed: lk.seed, t: S.t, wa: 0, puller: true, skin: lk.skin, cap: lk.cap, mask: lk.mask, lungi: lk.lungi, shirt: lk.shirt, plate: i % 2 ? 'টেসলা' : null, pass: st.boarded === i && (st.state === 'seated') });
+    A.rickshaw(sl.x, sl.y, sl.sc, { col: lk.col, seed: lk.seed, t: S.t, wa: 0, puller: true, skin: lk.skin, cap: lk.cap, mask: lk.mask, lungi: lk.lungi, shirt: lk.shirt, plate: i % 2 ? 'ব্যাটারি' : null, pass: st.boarded === i && (st.state === 'seated') });
   }
   const sl = SLOTS[st.idx];
   if (st.state !== 'seated') {
@@ -1489,7 +1524,7 @@ function onSkip() {
 const TUT = () => {
   const t = isTouch();
   return [
-    ['🛺', 'যাত্রা শুরু!', 'নতুন বাজার থেকে ইউআইইউ — ভাঙা রাস্তা, গর্ত, জ্যাম আর হকারের ভিড় পেরিয়ে অটোর সিট ধরে বেঁচে পৌঁছাও।'],
+    ['🛺', 'যাত্রা শুরু!', 'নতুন বাজার থেকে ইউআইইউ — ভাঙা রাস্তা, গর্ত, জ্যাম আর হকারের ভিড় পেরিয়ে ব্যাটারি রিক্সার সিট শক্ত করে ধরে বেঁচে পৌঁছাও।'],
     ['✋', 'সিট ধরো', t ? 'ডানদিকের সবুজ <b>✋ ধরো</b> বাটন চেপে ধরে রাখো। গর্তে পড়ার ঠিক আগে ধরো — নইলে ঝাঁকুনিতে ছিটকে পড়বে। ধরে রাখলে স্ট্যামিনা কমে!' : '<b>SPACE</b> চেপে ধরে রাখো। গর্তে পড়ার ঠিক আগে ধরো — নইলে ঝাঁকুনিতে ছিটকে পড়বে। ধরে রাখলে স্ট্যামিনা কমে!'],
     ['⚖️', 'ব্যালান্স', t ? 'বাঁয়ের <b>◀ ▶</b> বাটনে উল্টো দিকে কাত হয়ে ব্যালান্স রাখো। নিচের মিটার সবুজ অংশে রাখো।' : '<b>← →</b> (বা A / D) দিয়ে উল্টো দিকে কাত হয়ে ব্যালান্স রাখো। নিচের মিটার সবুজ অংশে রাখো।'],
     ['🐢', 'ধীরে মামা!', (t ? '<b>🐢 ধীরে</b> বাটন' : '<b>↓</b> (বা S)') + ' চেপে সামনের গাড়ি আর রাস্তা-পার-হওয়া মানুষের সাথে গুঁতা এড়াও। মানুষকে মারলে জনতা তাড়া করবে — তখন থেমো না!'],
@@ -1601,7 +1636,7 @@ CTRL.mode = ['manual', 'tilt', 'auto'].includes(store.get('tm_ctrl')) ? store.ge
 $('invChk').checked = store.get('tm_inv') === '1';
 Array.from($('ctrlBtns').children).forEach(c => c.classList.toggle('on', c.dataset.c === CTRL.mode));
 $('ctrlBtns').addEventListener('click', e => { const t = e.target && e.target.closest ? e.target.closest('button') : e.target; if (!t || !t.dataset || !t.dataset.c) return; CTRL.mode = t.dataset.c; store.set('tm_ctrl', CTRL.mode); Array.from($('ctrlBtns').children).forEach(c => c.classList.toggle('on', c === t)); if (CTRL.mode === 'tilt') enableTilt(); applyCtrlClass(); $('ctrlNote').textContent = CTRL_NOTE[CTRL.mode]; });
-const CTRL_NOTE = { manual: 'বাটন বা কিবোর্ড: ◀ ▶ হেলাও, ✋ ধরো, 🐢 ধীরে।', tilt: 'টিল্ট (Tilt): ফোন ডানে-বামে হেলালে রিক্সা হেলবে, তাই স্ক্রিনে ◀ ▶ বাটন থাকবে না। ফোনের উপরের দিক নিজের দিকে টানলে হাত ধরবে, দূরে ঠেললে ধীরে চলবে। দিক উল্টো মনে হলে "উল্টো" টিক দাও। সেন্সর না পেলে বাটন নিজে থেকেই ফিরে আসবে।', auto: 'অটো (Auto balance): গেম নিজেই ব্যালান্স রাখবে, তাই ◀ ▶ নেই। শুধু দরকারে ✋ আর 🐢 চাপো — সবচেয়ে সহজ।' };
+const CTRL_NOTE = { manual: 'বাটন বা কিবোর্ড: ◀ ▶ হেলাও, ✋ ধরো, 🐢 ধীরে।', tilt: 'টিল্ট (Tilt): ফোন ডানে-বামে হেলালে রিক্সা হেলবে, তাই স্ক্রিনে ◀ ▶ বাটন থাকবে না। ফোনের উপরের দিক নিজের দিকে টানলে হাত ধরবে, দূরে ঠেললে ধীরে চলবে। দিক উল্টো মনে হলে "উল্টো" টিক দাও। সেন্সর না পেলে বাটন নিজে থেকেই ফিরে আসবে।', auto: 'সহজ (Easy balance): গেম নিজেই ব্যালান্স রাখবে, তাই ◀ ▶ নেই। শুধু দরকারে ✋ আর 🐢 চাপো — সবচেয়ে সহজ।' };
 $('ctrlNote').textContent = CTRL_NOTE[CTRL.mode]; applyCtrlClass();
 FARE.gender = store.get('tm_gender') === 'f' ? 'f' : 'm';
 Array.from($('genBtns').children).forEach(c => c.classList.toggle('on', c.dataset && c.dataset.g === FARE.gender));
@@ -1610,5 +1645,5 @@ requestAnimationFrame(frame);
 
 layout();
 // exposed for headless tests only
-window.__tm = { CTRL, onTilt, get S() { return S; }, update, render, startGame, beginRide, openFare, inp, FARE, BOARDINGS, newDriver, respond, finishDeal, resize, layout, updateWorld, hitPed, startWrong, AMB, NAMED, standTick, plead, onOffer, onNextAuto, onSkip, SLOTS };
+if (typeof location === 'undefined' || /^(localhost|127\.0\.0\.1)$/.test(location.hostname)) window.__tm = { CTRL, onTilt, get S() { return S; }, update, render, startGame, beginRide, openFare, inp, FARE, BOARDINGS, newDriver, respond, finishDeal, resize, layout, updateWorld, hitPed, startWrong, AMB, NAMED, standTick, plead, onOffer, onNextAuto, onSkip, SLOTS };
 })();

@@ -7,11 +7,12 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="টেসলা মামা">
+<meta name="apple-mobile-web-app-title" content="মামা, সিট ধরে বসেন!">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon.svg">
-<title>টেসলা মামা: সিট ধরে রাখো! | নতুন বাজার → UIU</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
+<title>মামা, শক্ত করে সিট ধরে বসেন! | ব্যাটারি রিক্সা: নতুন বাজার → UIU</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600;700&display=swap" rel="stylesheet">
@@ -25,8 +26,8 @@
 
     <div id="menu" class="overlay">
       <div class="card">
-        <h1>🛺 টেসলা মামা</h1>
-        <h2>সিট ধরে রাখো!</h2>
+        <h1>🛺 মামা, সিট ধরে বসেন!</h1>
+        <h2>শক্ত করে সিট ধরে বসেন, ব্যাটারি রিক্সা চলছে!</h2>
         <p class="route">নতুন বাজার → ফ্যামিলি বাজার → সাঈদ নগর → দশতলা → বিটুমিন গেট → ইউ-টার্ন → মসজিদ আল মুস্তাফা → <b>UIU</b></p>
         <label class="name">তোমার নাম
           <input id="nameInput" maxlength="24" placeholder="যেমন: সৌরভ" autocomplete="off">
@@ -35,7 +36,7 @@
           <div id="genBtns" class="seg"><button data-g="m" class="on">👦 ছেলে</button><button data-g="f">👧 মেয়ে</button></div>
         </div>
         <div class="pick"><span>কন্ট্রোল</span>
-          <div id="ctrlBtns" class="seg"><button data-c="manual" class="on">🎮 ম্যানুয়াল<small>Manual</small></button><button data-c="tilt">📱 টিল্ট<small>Tilt (ফোন হেলানো)</small></button><button data-c="auto">🤖 অটো<small>Auto balance</small></button></div>
+          <div id="ctrlBtns" class="seg"><button data-c="manual" class="on">🎮 ম্যানুয়াল<small>Manual</small></button><button data-c="tilt">📱 টিল্ট<small>Tilt (ফোন হেলানো)</small></button><button data-c="auto">🤝 সহজ<small>Easy balance</small></button></div>
           <label class="chk"><input type="checkbox" id="invChk"> ↔ উল্টো</label>
           <div id="ctrlNote" class="note"></div>
         </div>
@@ -104,14 +105,15 @@
     </div>
   </div>
 
-  <div id="rot" aria-live="polite"><div class="rotBox"><div class="phone">📱</div><h2>ফোনটা আড়াআড়ি ঘুরাও!</h2><p>ভালো খেলার জন্য ফোন landscape-এ নাও। অটো-লক চালু থাকলে বন্ধ করো।</p><button id="rotSkip" class="alt">তবুও এভাবেই খেলব</button></div></div>
+  <div id="rot" aria-live="polite"><div class="rotBox"><div class="phone">📱</div><h2>ফোনটা আড়াআড়ি ঘুরাও!</h2><p>ভালো খেলার জন্য ফোন landscape-এ নাও। স্ক্রিন-ঘোরানো লক চালু থাকলে বন্ধ করো।</p><button id="rotSkip" class="alt">তবুও এভাবেই খেলব</button></div></div>
   <div id="rotToast">📱 ফোন আড়াআড়ি (landscape) ঘোরালে আরও বড় ও মজার দেখা যাবে</div>
   <button id="calBtn" type="button">🎯 ক্যালিব্রেট</button>
   <div id="touch">
     <div class="grp lr"><button id="bL" aria-label="left">◀</button><button id="bR" aria-label="right">▶</button></div>
-    <div class="grp ac"><button id="bS">🐢 ধীরে</button><button id="bG">✋ ধরো</button></div>
+    <div class="grp ac"><button id="bS" aria-label="slow down"><span>🐢</span><small>ধীরে</small></button><button id="bG" aria-label="hold the seat"><span>✋</span><small>সিট ধরো</small></button></div>
   </div>
 </div>
+<script src="js/guard.js"></script>
 <script src="js/lines.js"></script>
 <script src="js/art.js"></script>
 <script src="js/game.js"></script>

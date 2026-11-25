@@ -7,3 +7,5 @@ Serve the game (`python3 -m http.server 8123`) and run, with `playwright` instal
 - `controls_e2e.py` – Manual/Tilt/Auto UI per mode, tilt fallback pad, frame timing.
 
 Edit the Chrome path (`/usr/bin/google-chrome`) at the top of each script if needed.
+
+Tests expect the game on http://localhost:8123 (serve the repo root, or `dist/` after `npm run build`). The `__tm` debug hook is only exposed on localhost.
