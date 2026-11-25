@@ -87,9 +87,20 @@
           "voice_id": "PUT_ID_HERE"
         }
       ],
-      "crowd": {
-        "voice_id": "PUT_ID_HERE"
-      },
+      "crowd": [
+        {
+          "voice_id": "PUT_ID_HERE"
+        },
+        {
+          "voice_id": "PUT_ID_HERE"
+        },
+        {
+          "voice_id": "PUT_ID_HERE"
+        },
+        {
+          "voice_id": "PUT_ID_HERE"
+        }
+      ],
       "ped": {
         "voice_id": "PUT_ID_HERE"
       }
@@ -130,6 +141,7 @@
     "car": 3,
     "rick": 3,
     "bus": 3,
-    "cng": 3
+    "cng": 3,
+    "crowd": 4
   }
 }

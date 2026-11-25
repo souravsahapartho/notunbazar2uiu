@@ -90,3 +90,12 @@ manifest.webmanifest  installable / fullscreen on phones
 - Tilt sensor directions differ between phones. Real-device testing is welcome; open an issue.
 
 Made by Sourav Saha (UIU CSE, Dhaka).
+
+## Latest changes
+
+- Lean hints ("lean left / lean right") appear only when playing with tilt controls.
+- Rickshaw driver now wears a checked lungi and a half-sleeve shirt; the headlight is gone (it is daytime and rickshaws have none).
+- New synthesised engine hum, tyre rumble, road hiss, rattles and a heavy thump on bumps.
+- The chasing mob is now a chorus of up to 11 overlapping voices with varied lines. Four crowd voice variants are supported by the ElevenLabs pipeline (`tools/design_voices.py`, `tools/gen_voices.py`).
+- Spoken lines no longer show as captions by default (subtitles can still be switched on).
+- Chajoy, Shwapno and Al Kareem outlets redrawn from photos, using text and colours only.

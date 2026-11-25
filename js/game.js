@@ -89,18 +89,31 @@ const A = window.ART({ ctx, rr, txt, hash, mod, time: () => (S ? S.t : 0) });
 const isTouch = () => (window.matchMedia && matchMedia('(pointer:coarse)').matches) || ('ontouchstart' in window);
 
 /* ---------- audio (synthesised; nothing downloaded) ---------- */
-const settings = { voice: true, mute: false, subs: true, abuse: true };
+const settings = { voice: true, mute: false, subs: false, abuse: true };
 let AC = null, eng = null, engG = null;
+let motorG = null, whineO = null, whineG = null, roadG = null, hissG = null;
 function audioInit() {
   if (AC) { if (AC.state === 'suspended') AC.resume(); return; }
   try {
     AC = new (window.AudioContext || window.webkitAudioContext)();
-    eng = AC.createOscillator(); eng.type = 'sawtooth';
-    engG = AC.createGain(); engG.gain.value = 0;
-    const f = AC.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 380;
-    eng.connect(f); f.connect(engG); engG.connect(AC.destination); eng.start();
+    const nb = AC.createBuffer(1, AC.sampleRate * 2, AC.sampleRate), nd = nb.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+    const loop = () => { const s = AC.createBufferSource(); s.buffer = nb; s.loop = true; s.start(); return s; };
+    // battery-rickshaw motor: low hum + rising electric whine
+    eng = AC.createOscillator(); eng.type = 'triangle'; motorG = engG = AC.createGain(); engG.gain.value = 0;
+    const lp = AC.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 520; eng.connect(lp); lp.connect(engG); engG.connect(AC.destination); eng.start();
+    whineO = AC.createOscillator(); whineO.type = 'sine'; whineG = AC.createGain(); whineG.gain.value = 0; whineO.connect(whineG); whineG.connect(AC.destination); whineO.start();
+    // tyres on rough asphalt: rumble + hiss
+    const r = AC.createBiquadFilter(); r.type = 'lowpass'; r.frequency.value = 240; roadG = AC.createGain(); roadG.gain.value = 0; loop().connect(r); r.connect(roadG); roadG.connect(AC.destination);
+    const h = AC.createBiquadFilter(); h.type = 'bandpass'; h.frequency.value = 2400; h.Q.value = .7; hissG = AC.createGain(); hissG.gain.value = 0; loop().connect(h); h.connect(hissG); hissG.connect(AC.destination);
   } catch (e) { AC = null; }
 }
+function engineUpdate(speed, rough) {
+  if (!AC || !engG) return; const T = AC.currentTime, m = settings.mute ? 0 : 1, k = Math.min(1, speed / 20);
+  engG.gain.setTargetAtTime(m * (.02 + .03 * k), T, .1); eng.frequency.setTargetAtTime(58 + speed * 7, T, .06);
+  whineO.frequency.setTargetAtTime(210 + speed * 26, T, .06); whineG.gain.setTargetAtTime(m * (.004 + .014 * k), T, .1);
+  roadG.gain.setTargetAtTime(m * Math.min(.16, speed * .0075 * (1 + (rough || 0) * .5)), T, .1); hissG.gain.setTargetAtTime(m * Math.min(.03, speed * .0016), T, .1);
+}
+function engineOff() { if (!AC || !engG) return; const T = AC.currentTime; [engG, whineG, roadG, hissG].forEach(g => g && g.gain.setTargetAtTime(0, T, .1)); }
 function tone(f, d, type, v, delay) {
   if (!AC || settings.mute) return;
   const t = AC.currentTime + (delay || 0);
@@ -120,8 +133,10 @@ function noise(d, v, freq, type) {
 }
 const sfx = {
   horn() { tone(392, .3, 'square', .09); tone(494, .3, 'square', .07); },
-  thud() { noise(.28, .6, 300); tone(80, .22, 'sine', .3); },
-  bump() { noise(.12, .4, 500); tone(110, .12, 'sine', .22); },
+  thud() { noise(.36, .7, 260); tone(72, .3, 'sine', .4); tone(44, .38, 'sine', .3, .03); noise(.12, .3, 1300, 'bandpass'); sfx.rattle(5); sfx.squeak(); },
+  bump() { noise(.11, .45, 380); tone(96, .17, 'sine', .32); tone(58, .22, 'sine', .22, .02); noise(.07, .2, 1500, 'bandpass'); sfx.rattle(3); if (Math.random() < .5) sfx.squeak(); },
+  rattle(n) { for (let i = 0; i < n; i++) { tone(650 + Math.random() * 950, .035, 'square', .022, .03 + i * .045 + Math.random() * .03); noise(.03, .05, 2800, 'highpass'); } },
+  squeak() { if (!AC || settings.mute) return; const t = AC.currentTime, o = AC.createOscillator(), g2 = AC.createGain(); o.type = 'sawtooth'; o.frequency.setValueAtTime(520, t); o.frequency.linearRampToValueAtTime(900, t + .16); g2.gain.setValueAtTime(.012, t); g2.gain.exponentialRampToValueAtTime(.0001, t + .2); o.connect(g2); g2.connect(AC.destination); o.start(t); o.stop(t + .22); },
   splash() { noise(.35, .25, 1800, 'bandpass'); },
   squeal() { noise(.6, .12, 3000, 'highpass'); },
   win() { [523, 659, 784, 1046].forEach((f, i) => tone(f, .28, 'triangle', .14, i * .13)); },
@@ -137,7 +152,6 @@ function loadVoices() {
   const el = $('voiceNote');
   if (el) el.textContent = bnVoices.length ? `🔊 ${bnVoices.length}টি বাংলা ভয়েস পাওয়া গেছে — ছেলে/মেয়ে ভেদে ভয়েস বদলাবে।`
     : '🔇 এই ডিভাইসে বাংলা ভয়েস নেই — লেখা (সাবটাইটেল) দেখানো হবে।';
-  if (!subsTouched && $('subsChk')) { $('subsChk').checked = !bnVoices.length; settings.subs = !bnVoices.length; }
 }
 if ('speechSynthesis' in window) { loadVoices(); speechSynthesis.onvoiceschanged = loadVoices; }
 function voiceFor(g) {
@@ -177,13 +191,36 @@ function fnv(str) {
   return h.toString(16).padStart(8, '0');
 }
 // several different voices per role, so no two rickshaw mamas (or students) sound alike
-const NVAR = { driver: 5, player_m: 3, player_f: 3, car: 3, rick: 3, bus: 3, cng: 3 };
+const NVAR = { crowd: 4, driver: 5, player_m: 3, player_f: 3, car: 3, rick: 3, bus: 3, cng: 3 };
 let curRef = null;
 function varOf(key) {
   const base = key === 'player' ? 'player_' + FARE.gender : key, n = NVAR[base] || 1;
   if (base === 'driver') return (FARE.driver && FARE.driver.vi) % n || 0;
   if (base.startsWith('player_')) return (FARE.pv || 0) % n;
   return Math.floor((curRef && curRef.seed || 0)) % n;
+}
+/* a mob of 10-12 people shouting at once: synthesised roar + overlapping voice clips (or one TTS shout as a fallback) */
+function crowdRoar(n) {
+  if (!AC || settings.mute) return; const t0 = AC.currentTime;
+  for (let k = 0; k < n; k++) {
+    const t = t0 + Math.random() * .5, d = .5 + Math.random() * .7, f0 = 95 + Math.random() * 95;
+    const o = AC.createOscillator(); o.type = 'sawtooth'; o.frequency.setValueAtTime(f0, t); o.frequency.linearRampToValueAtTime(f0 * (1.1 + Math.random() * .3), t + d * .4); o.frequency.linearRampToValueAtTime(f0 * .88, t + d);
+    const b1 = AC.createBiquadFilter(), b2 = AC.createBiquadFilter(); b1.type = b2.type = 'bandpass'; b1.frequency.value = 560 + Math.random() * 260; b2.frequency.value = 1050 + Math.random() * 550; b1.Q.value = b2.Q.value = 4;
+    const g2 = AC.createGain(); g2.gain.setValueAtTime(.0001, t); g2.gain.exponentialRampToValueAtTime(.05, t + .08); g2.gain.exponentialRampToValueAtTime(.0001, t + d);
+    o.connect(b1); o.connect(b2); b1.connect(g2); b2.connect(g2); g2.connect(AC.destination); o.start(t); o.stop(t + d + .05);
+  }
+}
+function crowdShout(kind) {
+  if (!settings.voice || settings.mute) return;
+  crowdRoar(11);
+  const pool = kind === 'catch' ? L.mobCatch : L.mob.concat(settings.abuse ? L.mobRude : []);
+  let played = 0;
+  for (let k = 0; k < 11 && typeof Audio !== 'undefined' && typeof TextEncoder !== 'undefined'; k++) {
+    const text = pick(pool), v = Math.floor(Math.random() * NVAR.crowd), f = PACK.map[fnv('crowd#' + v + '|' + text)] || PACK.map[fnv('crowd|' + text)];
+    if (!f) continue; played++;
+    setTimeout(() => { try { const a = new Audio('audio/' + f); a.volume = .3 + Math.random() * .5; a.playbackRate = .94 + Math.random() * .14; const p = a.play(); if (p && p.catch) p.catch(() => {}); } catch (e) {} }, Math.random() * 700);
+  }
+  if (!played) speak(pick(pool), 'crowd', true);
 }
 const packKey = key => (key === 'player' ? 'player_' + FARE.gender : key) + '#' + varOf(key);
 const packBase = key => key === 'player' ? 'player_' + FARE.gender : key;
@@ -538,8 +575,8 @@ function update(dt) {
 
   // engine sound
   if (AC && engG) {
-    engG.gain.setTargetAtTime(settings.mute ? 0 : .045, AC.currentTime, .1);
-    eng.frequency.setTargetAtTime(48 + S.speed * 6 + Math.random() * 4, AC.currentTime, .05);
+    engineUpdate(S.speed, STAGES[stageOf(S.dist)].rough);
+    S.rattleT = (S.rattleT || 0) - dt; if (S.rattleT <= 0 && S.speed > 3) { sfx.rattle(1 + (Math.random() * 2 | 0)); S.rattleT = (.35 + Math.random() * .6) / (.6 + STAGES[stageOf(S.dist)].rough * .5); }
   }
 
   if (S.life <= 0) { S.life = 0; die('hit'); return; }
@@ -562,9 +599,9 @@ function hitPed(p) {
   jolt(1.8); sfx.thud(); S.flash = .5; S.flashCol = '#f59e0b';
   say('ped', pick(settings.abuse && Math.random() < .5 ? L.abuse : L.pedHit), { ref: p, force: true, life: 2.4 });
   if (!S.mob) {
-    S.mob = { x: S.dist - 4.5, v: 11, t: 0, n: 8, caught: false };
+    S.mob = { x: S.dist - 4.5, v: 11, t: 0, n: 11, caught: false, shoutT: 2.4 };
     S.banner = { text: '🏃 জনতা তাড়া করছে!', sub: 'থেমো না! ধীরে চালাতে বোলো না!', t: 0 };
-    later(.9, () => say('crowd', pick(settings.abuse && Math.random() < .5 ? L.mobRude : L.mob), { force: true, life: 2.6 }));
+    later(.6, () => crowdShout());
     later(2.2, () => { if (S.mob && S.mode === 'play') say('player', pick(L.mobRun), { life: 1.8 }); });
   }
 }
@@ -610,9 +647,10 @@ function updateWorld(dt) {
   // angry crowd
   if (S.mob) {
     const m = S.mob; m.t += dt; m.x += m.v * dt; const gap = S.dist - m.x;
+    m.shoutT -= dt; if (m.shoutT <= 0 && !m.caught) { crowdShout(); m.shoutT = 2 + Math.random() * 1.6; }
     if (!m.caught && gap < 1.5) {
       m.caught = true; m.v = 0; S.life -= 12; S.score -= 80; S.shake = 12; S.flash = .8; S.flashCol = '#ef4444'; S.stopT = 1.2; sfx.thud();
-      say('crowd', pick(L.mobCatch), { force: true, life: 2.4 }); later(1.6, () => { S.mob = null; });
+      crowdShout('catch'); later(1.6, () => { S.mob = null; });
     } else if (!m.caught && (m.t > 12 || gap > 60)) { say('crowd', pick(L.mobGiveUp), { life: 2.4 }); S.score += 60; S.mob = null; }
   }
   // oncoming traffic + wrong-side overtake
@@ -1140,7 +1178,7 @@ function bar(x, y, w, h, v, col, label) {
 }
 function drawHUD() {
   bar(12, 12, 190, 20, S.life / 100, S.life > 35 ? '#ef4444' : '#b91c1c', '❤ জীবন ' + Math.round(S.life));
-  if (S.mode === 'play' && Math.abs(S.a) > .3 && S.recover <= 0) { // which way to lean back, shown in every control mode
+  if (S.mode === 'play' && CTRL.mode === 'tilt' && Math.abs(S.a) > .3 && S.recover <= 0) { // which way to lean back: only when playing by tilt
     const need = S.a > 0 ? -1 : 1, al = clamp((Math.abs(S.a) - .3) / .5, 0, 1);
     ctx.save(); ctx.globalAlpha = .45 + al * .5; ctx.fillStyle = al > .6 ? '#ef4444' : '#f59e0b'; ctx.font = '700 22px sans-serif'; ctx.textAlign = 'center';
     const cxx = W / 2 + need * 70; ctx.beginPath(); ctx.moveTo(cxx + need * 28, 150); ctx.lineTo(cxx - need * 14, 132); ctx.lineTo(cxx - need * 14, 168); ctx.fill();
@@ -1313,7 +1351,7 @@ function frame(now) {
     S.confetti.forEach(c => { c.x += c.vx * dt; c.y += c.vy * dt; if (c.y > H) c.y = -10; });
     S.flash = Math.max(0, S.flash - 2 * dt);
   } else ambient(dt);
-  if (AC && engG && S.mode !== 'play') engG.gain.setTargetAtTime(0, AC.currentTime, .1);
+  if (AC && engG && S.mode !== 'play') engineOff();
   render();
   requestAnimationFrame(frame);
 }

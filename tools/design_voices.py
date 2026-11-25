@@ -34,7 +34,11 @@ DESC = {
  "rick": [BASE + d for d in ["male rickshaw puller, 40 years old, shouting", "male rickshaw puller, 55 years old, hoarse", "young male rickshaw puller, 24 years old, loud"]],
  "bus": [BASE + d for d in ["bus helper (conductor), 28 years old, shouting stops fast", "bus helper, 35 years old, hoarse", "bus helper, 22 years old, high energy"]],
  "cng": [BASE + d for d in ["CNG auto driver, 38 years old, loud", "CNG auto driver, 45 years old, gruff", "CNG auto driver, 28 years old, fast"]],
- "crowd": [BASE + "angry male crowd member, 35 years old, shouting"],
+ "crowd": [BASE + d for d in [
+   "angry adult male in a street mob, 35 years old, loud and hoarse, shouting",
+   "young angry male, 22 years old, high-pitched, shouting",
+   "older angry male, 50 years old, deep gravelly, shouting",
+   "angry male bystander, 30 years old, fast and breathless, shouting"]],
  "ped": [BASE + "male pedestrian, 40 years old, startled and loud"],
 }
 def call(path, body):
