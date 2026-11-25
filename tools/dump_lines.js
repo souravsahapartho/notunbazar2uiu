@@ -7,7 +7,7 @@ const add = (text, keys) => { if (typeof text === 'string' && text.trim()) keys.
 const walk = (v, keys) => Array.isArray(v) ? v.forEach(x => walk(x, keys)) : add(v, keys);
 const P = ['player_m', 'player_f'], CARS = ['car', 'rick', 'bus', 'cng'];
 const map = {
-  carYell: CARS, abuse: [...CARS, ...P], angry: P, hardHit: P, pedHit: ['ped'], pedWarn: ['ped'], mob: ['crowd'], mobRude: ['crowd'], mobCatch: ['crowd'], mobRun: P,
+  carYell: CARS, abuse: [...CARS, ...P], angry: P, hardHit: P, pedHit: ['ped'], pedWarn: ['ped'], mob: ['crowd'], mobRude: ['crowd'], mobCatch: ['crowd'], lturn: P, uturn: P, mobRun: P,
   driverIdle: ['driver'], dyingDriver: ['driver'], playerIdle: P, moreIdle: P, nearFall: P, fall: P, dying: P,
   dyingWarn: P, start: P, win: P, brake: P, jam: ['car']
 };

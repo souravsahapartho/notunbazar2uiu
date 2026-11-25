@@ -99,3 +99,11 @@ Made by Sourav Saha (UIU CSE, Dhaka).
 - The chasing mob is now a chorus of up to 11 overlapping voices with varied lines. Four crowd voice variants are supported by the ElevenLabs pipeline (`tools/design_voices.py`, `tools/gen_voices.py`).
 - Spoken lines no longer show as captions by default (subtitles can still be switched on).
 - Chajoy, Shwapno and Al Kareem outlets redrawn from photos, using text and colours only.
+
+## Route, lanes and turns
+
+- The route is split into 20 equal units, by real-life distance: Natun Bazar to Family Bazar 3, to Sayed Nagar 5, to 10 Tola 2, to Bitumen Gate 2, to Chef's Table 3, to Masjid Al Mustafa 2, to UIU 3. The strip at the top of the screen uses the same proportions. Change `GAPS` and `UNIT` in `js/game.js` to adjust.
+- Bangladeshi left-hand traffic: our rickshaw drives in the outer lane of the far carriageway (2 lanes, same direction); the two near lanes carry the oncoming traffic, with the median between them.
+- After the U-turn at Chef's Table there is a left turn onto the Masjid / UIU road (UIU is on the left); the rickshaw swings into it, seen from behind.
+- Our rickshaw is named "টেসলা / TESLA". Chef's Table is a park-style food court with a small football turf, floodlights, trees and benches.
+- Smoothness: rosette sprites are cached, and the canvas resolution adapts to the device (drops a little on slow phones, climbs back when there is headroom). Cruising speed is 2% gentler.

@@ -21,11 +21,24 @@ window.ART = function (E) {
   }
 
   /* ---------- Dhaka cycle/battery rickshaw: tin-art panels, ribbed painted hood, fringe, tassels ---------- */
-  function flower8(ex, ey, r, c1, c2, c3) {
-    ctx.fillStyle = '#fde68a'; ctx.beginPath(); ctx.ellipse(ex, ey, r * 1.15, r * 1.05, 0, 0, 7); ctx.fill();
-    ctx.strokeStyle = 'rgba(120,53,15,.7)'; ctx.lineWidth = .8;
-    ctx.fillStyle = c1; for (let p = 0; p < 8; p++) { const an = p * .785; ctx.beginPath(); ctx.ellipse(ex + Math.cos(an) * r * .52, ey + Math.sin(an) * r * .52, r * .33, r * .22, an, 0, 7); ctx.fill(); ctx.stroke(); }
-    ctx.fillStyle = c2; circle(ex, ey, r * .3); ctx.fillStyle = c3; circle(ex, ey, r * .13);
+  const FCACHE = {};
+  function flower8(ex, ey, r, c1, c2, c3) { // painted rosette, pre-rendered once per colour set (it is drawn dozens of times a frame)
+    const key = c1 + c2 + c3 + Math.round(r * 2);
+    let c = FCACHE[key];
+    if (!c && (typeof document === 'undefined' || !document.createElement)) { // no DOM (smoke test): draw directly
+      ctx.fillStyle = c1; circle(ex, ey, r); ctx.fillStyle = c2; circle(ex, ey, r * .3); return;
+    }
+    if (!c) {
+      const R = 3, sz = Math.ceil(r * 2.6) * R, cv = document.createElement('canvas'); cv.width = cv.height = sz; const g = cv.getContext && cv.getContext('2d');
+      if (!g) { ctx.fillStyle = c1; circle(ex, ey, r); return; }
+      g.scale(R, R); const cx = sz / R / 2;
+      g.fillStyle = '#fde68a'; g.beginPath(); g.ellipse(cx, cx, r * 1.15, r * 1.05, 0, 0, 7); g.fill();
+      g.strokeStyle = 'rgba(120,53,15,.7)'; g.lineWidth = .8; g.fillStyle = c1;
+      for (let p = 0; p < 8; p++) { const an = p * .785; g.beginPath(); g.ellipse(cx + Math.cos(an) * r * .52, cx + Math.sin(an) * r * .52, r * .33, r * .22, an, 0, 7); g.fill(); g.stroke(); }
+      g.fillStyle = c2; g.beginPath(); g.arc(cx, cx, r * .3, 0, 7); g.fill(); g.fillStyle = c3; g.beginPath(); g.arc(cx, cx, r * .13, 0, 7); g.fill();
+      c = FCACHE[key] = { cv, half: sz / R / 2 };
+    }
+    ctx.drawImage(c.cv, ex - c.half, ey - c.half, c.half * 2, c.half * 2);
   }
   function rickshaw(x, y, sc, o) {
     o = o || {};
@@ -77,6 +90,13 @@ window.ART = function (E) {
     ctx.fillStyle = c3; for (let k = 0; k < 12; k++) { ctx.beginPath(); ctx.arc(-71 + k * 6.3, -31.5, 2.2, 0, Math.PI); ctx.fill(); }
     if (o.plate) { ctx.fillStyle = '#fff'; rr(-32, -42, 38, 10, 2); ctx.fill(); ctx.strokeStyle = '#7c2d12'; ctx.lineWidth = .8; rr(-32, -42, 38, 10, 2); ctx.stroke(); txt(o.plate, -13, -34, 8.5, '#1e293b', 'center', 700); }
     ctx.fillStyle = ['#16a34a', '#ec4899', '#2563eb'][Math.floor(seed) % 3]; rr(-76, -70, 76, 9, 4); ctx.fill();
+    // extra realism: splashed mud along the sill, rust spots, reflector strip, hanging beads, battery box with its cable
+    ctx.fillStyle = 'rgba(92,64,38,.28)'; for (let k = 0; k < 9; k++) { ctx.beginPath(); ctx.ellipse(-72 + k * 9 + hash(seed + k) * 4, -31 + hash(seed * 2 + k) * 2, 4 + hash(k + seed) * 3, 2, 0, 0, 7); ctx.fill(); }
+    ctx.fillStyle = 'rgba(120,50,20,.35)'; circle(-60 + hash(seed) * 50, -58 + hash(seed + 3) * 8, 1.4); circle(-30 + hash(seed + 1) * 30, -54 + hash(seed + 5) * 10, 1.1);
+    ctx.fillStyle = '#ef4444'; ctx.fillRect(-79, -52, 3, 9); ctx.fillStyle = '#fde047'; ctx.fillRect(-79, -43, 3, 3);
+    if (!o.cycle) { ctx.fillStyle = '#111827'; rr(-48, -25, 34, 9, 2); ctx.fill(); ctx.fillStyle = '#374151'; ctx.fillRect(-44, -23, 26, 2); ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-14, -21); ctx.quadraticCurveTo(-4, -16, 4, -21); ctx.stroke(); }
+    ctx.strokeStyle = '#facc15'; ctx.lineWidth = 1; for (let k = 0; k < 4; k++) { const bx = -66 + k * 11; ctx.beginPath(); ctx.moveTo(bx, -61); ctx.lineTo(bx + Math.sin(t * 3 + k) * 1.2, -53); ctx.stroke(); ctx.fillStyle = pickH(['#ef4444', '#22c55e', '#3b82f6', '#f97316'], seed + k); circle(bx + Math.sin(t * 3 + k) * 1.2, -52, 1.6); }
+    if (o.name) { ctx.fillStyle = '#111827'; rr(-76, -70, 76, 9, 4); ctx.fill(); txt(o.name, -38, -62.2, 7.4, '#fde047', 'center', 700); }
     ctx.fillStyle = 'rgba(255,255,255,.25)'; rr(-72, -69, 64, 2.4, 1); ctx.fill();
     // ribbed, painted folding hood (concertina ribs, gold braid, flowers, fringe)
     ctx.save(); ctx.translate(-40, -68); ctx.rotate(-.12);
@@ -697,30 +717,52 @@ window.ART = function (E) {
   }
 
   /* ---------- Chef's Table food court (United City) ---------- */
-  function chefsTable(cx, B) {
-    const t = E.time(), w = 380, h = 220;
-    ctx.fillStyle = '#134e4a'; ctx.fillRect(cx - w / 2, B - h, w, h);
-    ctx.fillStyle = '#0f3d3a'; ctx.fillRect(cx - w / 2, B - h, w, 16);
-    ctx.fillStyle = '#7dd3fc'; ctx.fillRect(cx - w / 2 + 16, B - 160, w - 32, 112);
-    ctx.fillStyle = 'rgba(255,255,255,.35)'; for (let k = 1; k < 9; k++) ctx.fillRect(cx - w / 2 + 16 + k * (w - 32) / 9, B - 160, 2, 112);
-    const boards = [['Sushi', '#e11d48'], ['Thai', '#16a34a'], ['Desi', '#f59e0b'], ['Pizza', '#dc2626'], ['Hakka', '#7c3aed'], ['Grill', '#0ea5e9']];
-    boards.forEach((b, k) => { const bx = cx - w / 2 + 26 + k * 56; ctx.fillStyle = b[1]; rr(bx, B - 150, 50, 20, 4); ctx.fill(); txt(b[0], bx + 25, B - 135, 11, '#fff', 'center', 700); });
-    for (let k = 0; k < 6; k++) { const bx = cx - w / 2 + 28 + k * 56; ctx.fillStyle = 'rgba(253,230,138,.8)'; circle(bx + 22, B - 108, 6); ctx.fillStyle = 'rgba(15,23,42,.45)'; ctx.fillRect(bx + 12, B - 100, 20, 36); }
-    const g = ctx.createLinearGradient(cx - 150, 0, cx + 150, 0); g.addColorStop(0, '#b45309'); g.addColorStop(.5, '#fbbf24'); g.addColorStop(1, '#b45309');
-    ctx.fillStyle = g; rr(cx - 160, B - h - 54, 320, 62, 12); ctx.fill();
-    txt("CHEF'S TABLE", cx, B - h - 18, 34, '#3b1d00', 'center', 700);
-    txt('শেফস টেবিল • ফুড কোর্ট', cx, B - h + 2, 14, '#431407', 'center', 700);
-    ctx.fillStyle = '#e2e8f0'; ctx.fillRect(cx - 24, B - 52, 48, 52); ctx.fillStyle = 'rgba(14,165,233,.5)'; ctx.fillRect(cx - 20, B - 48, 18, 48); ctx.fillRect(cx + 2, B - 48, 18, 48);
-    // courtside: umbrellas, tables, fairy lights
-    for (let k = 0; k < 4; k++) {
-      const ux = cx - 150 + k * 100; ctx.fillStyle = '#92400e'; ctx.fillRect(ux - 1.5, B - 58, 3, 58);
-      ctx.fillStyle = pickH(['#ef4444', '#facc15', '#22c55e', '#3b82f6'], k + 9); ctx.beginPath(); ctx.arc(ux, B - 58, 34, Math.PI, 0); ctx.fill();
-      ctx.fillStyle = '#7c2d12'; ctx.fillRect(ux - 22, B - 20, 44, 4); ctx.fillRect(ux - 2, B - 16, 4, 16);
+  function chefsTable(cx, B) { // a park-style food court: many restaurants round a small football turf, trees, benches, floodlights
+    const t = E.time(), W2 = 620, x0 = cx - W2 / 2;
+    // back row: two-storey restaurant block with glass fronts and individual fascia boards
+    ctx.fillStyle = '#e7e2d8'; ctx.fillRect(x0, B - 150, W2, 150);
+    ctx.fillStyle = '#cfc8ba'; ctx.fillRect(x0, B - 150, W2, 10);
+    const R = [['Chef\'s Table', '#b45309', '#fde68a'], ['Sushi Bar', '#be123c', '#fff'], ['Thai Wok', '#15803d', '#fef9c3'], ['Pizza Hub', '#dc2626', '#fff'], ['Kebab House', '#0f1f4d', '#dbeafe'], ['Desi Dhaba', '#d97706', '#fff'], ['Café 360', '#6d28d9', '#fff'], ['Grill & Chill', '#0e7490', '#fff']];
+    R.forEach((r, k) => {
+      const bx = x0 + 8 + k * 76;
+      ctx.fillStyle = r[1]; ctx.fillRect(bx, B - 146, 70, 20); txt(r[0], bx + 35, B - 132, r[0].length > 9 ? 9 : 11, r[2], 'center', 700);
+      ctx.fillStyle = '#c3e6f3'; ctx.fillRect(bx + 2, B - 118, 66, 44);
+      ctx.fillStyle = 'rgba(255,236,179,.85)'; ctx.fillRect(bx + 2, B - 118, 66, 11);
+      ctx.fillStyle = 'rgba(30,41,59,.55)'; for (let q = 0; q < 3; q++) { ctx.fillRect(bx + 8 + q * 20, B - 92, 12, 14); circle(bx + 14 + q * 20, B - 98, 4); }
+      ctx.fillStyle = 'rgba(255,255,255,.4)'; ctx.beginPath(); ctx.moveTo(bx + 2, B - 118); ctx.lineTo(bx + 26, B - 118); ctx.lineTo(bx + 2, B - 88); ctx.fill();
+      ctx.fillStyle = r[1]; ctx.fillRect(bx - 1, B - 72, 72, 5); // awning
+      for (let q = 0; q < 7; q++) { ctx.fillStyle = q % 2 ? '#fff' : r[1]; ctx.fillRect(bx + q * 10, B - 67, 10, 5); }
+    });
+    ctx.fillStyle = '#134e4a'; rr(cx - 130, B - 196, 260, 48, 10); ctx.fill(); ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 2; rr(cx - 126, B - 192, 252, 40, 8); ctx.stroke();
+    txt("CHEF'S TABLE", cx, B - 166, 30, '#fde68a', 'center', 700); txt('শেফস টেবিল • ফুড কোর্ট ও পার্ক', cx, B - 153, 10, '#ecfeff', 'center', 700);
+    // football turf (small-sided astro pitch) in front of the block, behind a mesh fence
+    const tx0 = x0 + 60, tw = W2 - 140, ty0 = B - 62, th = 54;
+    ctx.fillStyle = '#16803c'; ctx.fillRect(tx0, ty0, tw, th);
+    for (let k = 0; k < 12; k++) { ctx.fillStyle = k % 2 ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.06)'; ctx.fillRect(tx0 + k * tw / 12, ty0, tw / 12, th); }
+    ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 1.6; ctx.strokeRect(tx0 + 8, ty0 + 6, tw - 16, th - 12);
+    ctx.beginPath(); ctx.moveTo(tx0 + tw / 2, ty0 + 6); ctx.lineTo(tx0 + tw / 2, ty0 + th - 6); ctx.stroke(); ctx.beginPath(); ctx.ellipse(tx0 + tw / 2, ty0 + th / 2, 16, 10, 0, 0, 7); ctx.stroke();
+    ctx.strokeRect(tx0 + 8, ty0 + 16, 30, th - 32); ctx.strokeRect(tx0 + tw - 38, ty0 + 16, 30, th - 32);
+    for (const gx of [tx0 + 4, tx0 + tw - 10]) { ctx.strokeStyle = '#f8fafc'; ctx.lineWidth = 2; ctx.strokeRect(gx, ty0 + 20, 6, th - 40); ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.lineWidth = .7; for (let q = 1; q < 5; q++) { ctx.beginPath(); ctx.moveTo(gx, ty0 + 20 + q * (th - 40) / 5); ctx.lineTo(gx + 6, ty0 + 20 + q * (th - 40) / 5); ctx.stroke(); } }
+    const bp = Math.sin(t * .9) * .5 + .5, ballx = tx0 + 30 + bp * (tw - 60), bally = ty0 + th / 2 + Math.sin(t * 2.3) * 12;
+    const kit = [['#ef4444', '#fff'], ['#2563eb', '#fff'], ['#facc15', '#111']];
+    for (let k = 0; k < 6; k++) {
+      const side = k % 2, ph = t * (1.2 + k * .17) + k * 1.7, px = tx0 + 30 + ((Math.sin(ph) * .5 + .5) * .5 + (side ? .45 : 0) + .02) * (tw - 60), py = ty0 + 12 + ((k * 9) % (th - 22)) + Math.sin(ph * 1.9) * 5;
+      person(px, py + 14, .5, { shirt: kit[side][0], pants: '#111827', skin: pickH(SKIN, k), ph: t * 9 + k * 1.3, run: true, dir: Math.cos(ph) > 0 ? 1 : -1 });
     }
-    for (let k = 0; k < 14; k++) { ctx.fillStyle = k % 2 ? '#fde047' : '#fb7185'; circle(cx - w / 2 + k * 29 + 6, B - h + 14 + Math.sin(k) * 3, 3 + Math.sin(t * 5 + k) * .8); }
-    person(cx - 112, B - 6, .8, { shirt: '#0ea5e9', pants: '#334155', sit: true, skin: pickH(SKIN, 1) });
-    person(cx + 90, B - 6, .8, { shirt: '#f43f5e', pants: '#1e293b', sit: true, skin: pickH(SKIN, 2), dir: -1, long: true });
-    txt('COURTSIDE • UNITED CITY', cx, B + 14, 11, '#134e4a', 'center', 700);
+    ctx.fillStyle = '#fff'; circle(ballx, bally + 8, 3); ctx.fillStyle = '#111'; circle(ballx + 1, bally + 7, 1.2);
+    // mesh fence and four floodlight masts
+    ctx.strokeStyle = 'rgba(30,41,59,.55)'; ctx.lineWidth = 1; ctx.strokeRect(tx0 - 2, ty0 - 26, tw + 4, th + 26);
+    for (let k = 0; k < 46; k++) { ctx.beginPath(); ctx.moveTo(tx0 - 2 + k * (tw + 4) / 46, ty0 - 26); ctx.lineTo(tx0 - 2 + k * (tw + 4) / 46, ty0 + th); ctx.stroke(); }
+    for (let k = 0; k < 6; k++) { ctx.beginPath(); ctx.moveTo(tx0 - 2, ty0 - 26 + k * 13); ctx.lineTo(tx0 + tw + 2, ty0 - 26 + k * 13); ctx.stroke(); }
+    for (const mx of [tx0 - 6, tx0 + tw / 2, tx0 + tw + 6]) { ctx.fillStyle = '#475569'; ctx.fillRect(mx - 2, B - 180, 4, 120); ctx.fillStyle = '#e2e8f0'; rr(mx - 14, B - 186, 28, 9, 3); ctx.fill(); ctx.fillStyle = 'rgba(254,249,195,' + (.8 + Math.sin(t * 3 + mx) * .1) + ')'; for (let q = 0; q < 4; q++) circle(mx - 10 + q * 6.6, B - 181.5, 2.2); }
+    // park: trees, benches, lamp posts, courtside umbrellas, fairy lights
+    for (const tx of [x0 - 20, x0 + 20, x0 + W2 - 14, x0 + W2 + 24]) { ctx.fillStyle = '#5b3a1a'; ctx.fillRect(tx - 4, B - 78, 8, 78); ctx.fillStyle = '#15803d'; circle(tx, B - 110, 30); ctx.fillStyle = '#16a34a'; circle(tx - 14, B - 96, 20); circle(tx + 15, B - 98, 20); }
+    for (let k = 0; k < 3; k++) { const bx = x0 + 120 + k * 150; ctx.fillStyle = '#7c2d12'; ctx.fillRect(bx, B - 16, 34, 4); ctx.fillRect(bx, B - 26, 34, 3); ctx.fillRect(bx + 3, B - 12, 3, 12); ctx.fillRect(bx + 28, B - 12, 3, 12); }
+    for (let k = 0; k < 4; k++) { const ux = x0 + 70 + k * 150; ctx.fillStyle = '#92400e'; ctx.fillRect(ux - 1.5, B - 34, 3, 34); ctx.fillStyle = pickH(['#ef4444', '#facc15', '#22c55e', '#3b82f6'], k + 9); ctx.beginPath(); ctx.arc(ux, B - 34, 22, Math.PI, 0); ctx.fill(); }
+    for (let k = 0; k < 26; k++) { ctx.fillStyle = k % 2 ? '#fde047' : '#fb7185'; circle(x0 + k * 24 + 6, B - 152 + Math.sin(k * .7) * 4, 2.4 + Math.sin(t * 5 + k) * .6); }
+    person(x0 + 132, B - 6, .8, { shirt: '#0ea5e9', pants: '#334155', sit: true, skin: pickH(SKIN, 1) });
+    person(x0 + 288, B - 6, .8, { shirt: '#f43f5e', pants: '#1e293b', sit: true, skin: pickH(SKIN, 2), dir: -1, long: true });
+    person(x0 + 460, B, .85, { shirt: '#a855f7', pants: '#1e293b', skin: pickH(SKIN, 3), ph: t * 3 });
   }
 
   /* ---------- Masjid Al Mustafa: dark Kaaba-toned hall, golden dome, green minor domes, slim minarets ---------- */

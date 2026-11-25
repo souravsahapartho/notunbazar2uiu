@@ -7,17 +7,20 @@ const cv = document.getElementById('game');
 const ctx = cv.getContext('2d');
 const W = 960, H = 540;
 let K = 1; // backing-store scale (sharp on any screen / devicePixelRatio)
+let QUAL = 1; // adaptive render quality: drops a little on slow devices so the game never stutters, creeps back up when there is headroom
 function resize() {
   let w = W; try { w = cv.getBoundingClientRect().width || W; } catch (e) { /* ignore */ }
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const dpr = Math.min(window.devicePixelRatio || 1, 2) * QUAL;
   cv.width = Math.max(320, Math.round(w * dpr)); cv.height = Math.round(cv.width * H / W); K = cv.width / W;
 }
 resize();
 
 const PPM = 40;          // pixels per metre
-const GY = 492;          // ground line for vehicles
+const GY = 492;          // ground line (near carriageway)
+const GYP = 440, PSC = .92, GYV = 466; // left-hand traffic: our carriageway is the far one (outer lane = rickshaws, inner lane = faster traffic); oncoming uses the two near lanes
 const SIDEY = 384;       // sidewalk top (building bases)
-const SEG = 330;         // metres per stage
+const UNIT = 120;        // metres per route unit; the whole route is 20 units
+const GAPS = [3, 5, 2, 2, 3, 2, 3]; // Natun Bazar > Family > Sayed Nagar > 10 Tola > Bitumen Gate > Chef's Table > Masjid > UIU
 const FONT = '"Hind Siliguri","Noto Sans Bengali",sans-serif';
 
 const STAGES = [
@@ -30,17 +33,20 @@ const STAGES = [
   { bn: 'মসজিদ আল মুস্তাফা',    short: 'মসজিদ',    en: 'Al Mustafa',   sky: ['#c77dff', '#ffc2d6'], rough: 1.1, puddle: .15 },
   { bn: 'ইউআইইউ',             short: 'UIU',      en: 'UIU',          sky: ['#ff7aa2', '#ffd27a'], rough: .6,  puddle: .05 }
 ];
-STAGES.forEach((s, i) => s.at = i * SEG);
-const FINISH = 7 * SEG + 140;
-const LM = STAGES.map((s, i) => i < 7 ? i * SEG + 140 : FINISH + 8); // landmark centres (m)
-const UTURN_AT = 5 * SEG + 150;
+const SA = [0]; GAPS.forEach(u => SA.push(SA[SA.length - 1] + u * UNIT)); // stage start (m)
+STAGES.forEach((s, i) => s.at = SA[i]);
+const FINISH = SA[7] + 140;
+const LM = STAGES.map((s, i) => i < 7 ? SA[i] + 140 : FINISH + 8); // landmark centres (m)
+const UTURN_AT = SA[5] + 150;
+const LTURN_AT = SA[6] - 30; // left turn onto the Masjid / UIU road after the U-turn
+const LTURN_DUR = 3;
 const UTURN_DUR = 3.2;
 // fair fare ranges in taka: [low, high]. Edit freely.
 const BOARDINGS = [
   { id: 'natun',  bn: 'নতুন বাজার',     at: 0,                 dry: [50, 50], rain: [50, 70] },
-  { id: 'family', bn: 'ফ্যামিলি বাজার', at: 1 * SEG + 140 - 70, dry: [40, 40], rain: [40, 60] },
-  { id: 'sayed',  bn: 'সাঈদ নগর',       at: 2 * SEG + 140 - 70, dry: [30, 40], rain: [40, 50] },
-  { id: 'tola',   bn: 'দশতলা',          at: 3 * SEG + 140 - 70, dry: [30, 30], rain: [30, 40] }
+  { id: 'family', bn: 'ফ্যামিলি বাজার', at: SA[1] + 140 - 70, dry: [40, 40], rain: [40, 60] },
+  { id: 'sayed',  bn: 'সাঈদ নগর',       at: SA[2] + 140 - 70, dry: [30, 40], rain: [40, 50] },
+  { id: 'tola',   bn: 'দশতলা',          at: SA[3] + 140 - 70, dry: [30, 30], rain: [30, 40] }
 ];
 
 /* ---------- helpers ---------- */
@@ -299,7 +305,7 @@ function newState() {
     objs: [], vehs: [], parts: [], bubbles: [], pend: [], banner: null,
     shake: 0, bobY: 0, bobV: 0, tilt: 0, turnSx: 1, face: 1, dir: 1, side: 0, camX: 300,
     nextRoadX: 30, nextVehX: 75, honkCool: 0, warnCool: 0, recover: 0, idleT: 4, nearT: 0,
-    stageIdx: 0, uturn: { state: 0, t: 0, sign: 1, flipped: false }, flash: 0, flashCol: '#fff',
+    stageIdx: 0, uturn: { state: 0, t: 0, sign: 1, flipped: false }, lturn: { state: 0, t: 0, sign: 1, flipped: false }, flash: 0, flashCol: '#fff',
     wheel: 0, rain: false, deal: null, mood: 'ok', peds: [], mob: null, onc: [], wrong: null, nextPedX: 60, nextOncT: 1, amb: {}, stopT: 0, jams: {}, jamDone: {}, deathT: 0, cause: '', name: '', hint: 9, confetti: []
   };
 }
@@ -327,8 +333,9 @@ function jolt(mag, sign) {
   S.bobV -= 60 * Math.min(1.5, mag);
   S.shake = Math.max(S.shake, Math.min(8, mag * 3));
 }
-function inSafeZone(x) { return (x > UTURN_AT - 25 && x < UTURN_AT + 45) || x > FINISH - 15; }
-function stageOf(x) { return Math.min(7, Math.max(0, Math.floor(x / SEG))); }
+function inSafeZone(x) { return (x > UTURN_AT - 25 && x < UTURN_AT + 45) || (x > LTURN_AT - 25 && x < LTURN_AT + 55) || x > FINISH - 15; }
+function stageOf(x) { let i = 0; while (i < 7 && x >= SA[i + 1]) i++; return i; }
+function stageF(x) { const i = stageOf(x); return i < 7 ? i + clamp((x - SA[i]) / (SA[i + 1] - SA[i]), 0, 1) : 7; }
 
 function spawnRoad(x) {
   if (inSafeZone(x)) return;
@@ -438,10 +445,10 @@ function update(dt) {
   if (CTRL.mode === 'tilt' && !CTRL.ok && S.t - (S.rideT0 || 0) > 2.5 && !document.body.classList.contains('tiltfail')) { document.body.classList.add('tiltfail'); say('player', 'সেন্সর পাচ্ছি না, বাটন দিয়ে চালাও!', { life: 2.2 }); }
 
   // speed
-  const cruise = 11.5 + 4.5 * prog + (S.mood === 'angry' ? 2.5 : S.mood === 'happy' ? -1.5 : 0);
+  const cruise = (11.5 + 4.5 * prog + (S.mood === 'angry' ? 2.5 : S.mood === 'happy' ? -1.5 : 0)) * .98; // 2% gentler than before
   const slowOn = inp.slow || (CTRL.mode === 'tilt' && CTRL.ok && CTRL.pitch < -.55);
   let target = slowOn ? 5.5 : cruise;
-  if (S.uturn.state === 1) target = 6;
+  if (S.uturn.state === 1 || S.lturn.state === 1) target = 6;
   if (S.recover > 0) target = Math.min(target, 7);
   if (S.stopT > 0) target = 0;
   const acc = target > S.speed ? 5 : 16;
@@ -477,6 +484,20 @@ function update(dt) {
     if (p >= 1) { u.state = 2; S.turnSx = 1; S.score += 100; }
   }
 
+  // left turn into the Masjid / UIU road (UIU is on the left): the rickshaw swings up into the side road, seen from behind
+  const lt = S.lturn;
+  if (lt.state === 0 && u.state === 2 && S.dist >= LTURN_AT) {
+    lt.state = 1; lt.t = 0; lt.sign = Math.random() < .5 ? -1 : 1; S.vehs = [];
+    sfx.squeal(); say('driver', pick(L.lturn), { speak: true, force: true });
+    S.banner = { text: '⬅ বামে টার্ন!', sub: 'মসজিদ আর ইউআইইউ-র রাস্তা', t: 0 };
+  }
+  if (lt.state === 1) {
+    lt.t += dt; const p = clamp(lt.t / LTURN_DUR, 0, 1);
+    S.turnSx = Math.max(.06, Math.abs(Math.cos(Math.PI * p))); S.face = 1;
+    if (p >= .5 && !lt.flipped) { lt.flipped = true; S.side = 2; S.flash = 1; S.flashCol = '#fff'; }
+    if (p >= 1) { lt.state = 2; S.turnSx = 1; S.score += 100; }
+  }
+
   // grip & stamina
   const gripOn = (inp.grip || (CTRL.mode === 'tilt' && CTRL.ok && CTRL.pitch > .55) || (CTRL.mode === 'auto' && Math.abs(S.a) > .55));
   if (gripOn && !S.gripLocked && S.stamina > 0) {
@@ -498,6 +519,7 @@ function update(dt) {
   if (CTRL.mode === 'auto') ac -= S.a * 4.2 + S.va * .8;
   if (S.gripping) ac -= S.a * 5;
   if (u.state === 1) ac += u.sign * 3.8 * Math.sin(Math.PI * clamp(u.t / UTURN_DUR, 0, 1));
+  if (lt.state === 1) ac += lt.sign * 3.2 * Math.sin(Math.PI * clamp(lt.t / LTURN_DUR, 0, 1));
   S.va += ac * dt;
   S.va *= Math.exp(-(S.gripping ? 7 : 3.2) * dt);
   S.a += S.va * dt;
@@ -532,7 +554,7 @@ function update(dt) {
       const wasGrip = S.gripping;
       jolt(mag); sfx[o.type === 'puddle' ? 'splash' : 'bump']();
       later(.28, () => jolt(mag * .6));
-      for (let i = 0; i < 12; i++) S.parts.push({ x: S.camX + 50 * S.face, y: GY, vx: rand(-80, 120) * S.face, vy: rand(-220, -80), life: rand(.4, .8), col: o.type === 'puddle' ? '#9bd7ff' : '#b8a080', r: rand(2, 4) });
+      for (let i = 0; i < 12; i++) S.parts.push({ x: S.camX + 50 * S.face, y: GYP, vx: rand(-80, 120) * S.face, vy: rand(-220, -80), life: rand(.4, .8), col: o.type === 'puddle' ? '#9bd7ff' : '#b8a080', r: rand(2, 4) });
       if (wasGrip && mag > 1.4) later(.9, () => { if (S.mode === 'play' && Math.abs(S.a) < .5) { S.goodGrips++; S.score += 15; if (Math.random() < .35) say('driver', pick(L.goodGrip), { life: 1.8 }); } });
       if (Math.random() < .3 && S.bubbles.length < 3) say('player', pick(L.playerIdle), { speak: false, life: 2 });
     }
@@ -544,7 +566,7 @@ function update(dt) {
     if (!v.leaving) {
       v.x += v.v * dt;
       const gap = v.x - (S.dist + 1.7);
-      if (gap > 0 && gap < 10 && v.wrongSide && !inp.slow && !S.wrong && S.speed > v.v + 3 && S.uturn.state !== 1) { startWrong(v); continue; }
+      if (gap > 0 && gap < 10 && v.wrongSide && !inp.slow && !S.wrong && S.speed > v.v + 3 && S.uturn.state !== 1 && S.lturn.state !== 1) { startWrong(v); continue; }
       if (gap < 0 && !v.hit) collide(v);
       else if (gap > 0 && gap < 16 && S.speed > v.v + 1.5) {
         if (S.honkCool <= 0) honk();
@@ -561,7 +583,7 @@ function update(dt) {
 
   // idle chatter
   S.idleT -= dt;
-  if (S.idleT <= 0 && S.bubbles.length < 2 && S.uturn.state !== 1) {
+  if (S.idleT <= 0 && S.bubbles.length < 2 && S.uturn.state !== 1 && S.lturn.state !== 1) {
     S.idleT = rand(6, 10);
     if (Math.random() < .5) say('driver', pick(L.driverIdle), { speak: true });
     else say('player', pick(L.playerIdle), { speak: true });
@@ -585,10 +607,10 @@ function update(dt) {
 
 const AMB = [
   { x: 30, key: 'hawker', t: 'জামা একশো টাকা, একশো টাকা! যা নেন একশো!' }, { x: 55, key: 'tea', t: 'চা, গরম চা! চা জয়!' },
-  { x: 110, key: 'rick', t: 'ভাই রিক্সা লাগবে? ইউআইইউ!' }, { x: SEG + 60, key: 'chop', t: 'গরম গরম চপ, পেঁয়াজু!' },
-  { x: SEG + 130, key: 'hawker', t: 'ভাই, এই শার্ট একশো টাকা!' }, { x: 2 * SEG + 95, key: 'rick', t: 'রিক্সা, রিক্সা! সাঈদ নগর!' },
-  { x: 2 * SEG + 170, key: 'tea', t: 'চা-পান, চা-পান!' }, { x: 3 * SEG + 100, key: 'ped', t: 'ওই ভাই, দেইখা চালান!' },
-  { x: 4 * SEG + 90, key: 'bus', t: 'বিটুমিন গেট, বিটুমিন গেট! নামেন নামেন!' }, { x: 6 * SEG + 80, key: 'ped', t: 'ইউআইইউ, ইউআইইউ!' }
+  { x: 110, key: 'rick', t: 'ভাই রিক্সা লাগবে? ইউআইইউ!' }, { x: SA[1] + 60, key: 'chop', t: 'গরম গরম চপ, পেঁয়াজু!' },
+  { x: SA[1] + 130, key: 'hawker', t: 'ভাই, এই শার্ট একশো টাকা!' }, { x: SA[2] + 95, key: 'rick', t: 'রিক্সা, রিক্সা! সাঈদ নগর!' },
+  { x: SA[2] + 170, key: 'tea', t: 'চা-পান, চা-পান!' }, { x: SA[3] + 100, key: 'ped', t: 'ওই ভাই, দেইখা চালান!' },
+  { x: SA[4] + 90, key: 'bus', t: 'বিটুমিন গেট, বিটুমিন গেট! নামেন নামেন!' }, { x: SA[6] + 80, key: 'ped', t: 'ইউআইইউ, ইউআইইউ!' }
 ];
 function spawnPed(x) {
   if (inSafeZone(x)) return;
@@ -694,7 +716,7 @@ function drawRain() {
 const X = mx => S.camX + (mx - S.dist) * PPM * S.dir;
 
 function drawSky() {
-  const f = clamp(S.dist / SEG, 0, 7), i = Math.floor(f), j = Math.min(7, i + 1), tt = f - i;
+  const f = stageF(S.dist), i = Math.floor(f), j = Math.min(7, i + 1), tt = f - i;
   const g = ctx.createLinearGradient(0, 0, 0, SIDEY);
   g.addColorStop(0, mix(STAGES[i].sky[0], STAGES[j].sky[0], tt));
   g.addColorStop(1, mix(STAGES[i].sky[1], STAGES[j].sky[1], tt));
@@ -755,12 +777,12 @@ const NAMED = [
   { x: 305, kind: 'hospital',  name: 'পরাজয় হাসপাতাল' },
   { x: 342, kind: 'shwapno' }, { x: 378, kind: 'restaurant', name: 'আলকারিম রেস্টুরেন্ট' }, { x: 404, kind: 'biryani', name: 'হাজি বিরিয়ানি' },
   { x: 430, kind: 'restaurant', name: 'ভোজন বিলাস' }, { x: 452, kind: 'pharmacy', name: 'আরোগ্য ফার্মেসি' },
-  { x: SEG + 28, kind: 'biryani', name: 'নয়ন বিরিয়ানি' }, { x: SEG + 60, kind: 'chop', name: 'চপ-সিঙ্গারা' }, { x: SEG + 92, kind: 'nagad', name: 'মা টেলিকম' },
-  { x: SEG + 150, kind: 'confection', name: 'ফ্যামিলি স্টোর' }, { x: SEG + 215, kind: 'garments', name: 'ফ্যামিলি ফ্যাশন' },
-  { x: 2 * SEG + 40, kind: 'furniture', name: 'আলমারি-খাট-সোফা' }, { x: 2 * SEG + 70, kind: 'furniture', name: 'কাঠের ঘর ফার্নিচার' },
-  { x: 2 * SEG + 120, kind: 'tong', name: 'সাঈদ নগর চা' }, { x: 2 * SEG + 215, kind: 'furniture', name: 'ডিজাইন ফার্নিচার' },
-  { x: 3 * SEG + 30, kind: 'pharmacy', name: 'সেবা ফার্মেসি' }, { x: 4 * SEG + 30, kind: 'pharmacy', name: 'বিটুমিন ফার্মেসি' },
-  { x: 4 * SEG + 215, kind: 'biryani', name: 'মা বিরিয়ানি' }, { x: 6 * SEG + 30, kind: 'nagad', name: 'আল মুস্তাফা টেলিকম' }
+  { x: SA[1] + 28, kind: 'biryani', name: 'নয়ন বিরিয়ানি' }, { x: SA[1] + 60, kind: 'chop', name: 'চপ-সিঙ্গারা' }, { x: SA[1] + 92, kind: 'nagad', name: 'মা টেলিকম' },
+  { x: SA[1] + 150, kind: 'confection', name: 'ফ্যামিলি স্টোর' }, { x: SA[1] + 215, kind: 'garments', name: 'ফ্যামিলি ফ্যাশন' },
+  { x: SA[2] + 40, kind: 'furniture', name: 'আলমারি-খাট-সোফা' }, { x: SA[2] + 70, kind: 'furniture', name: 'কাঠের ঘর ফার্নিচার' },
+  { x: SA[2] + 120, kind: 'tong', name: 'সাঈদ নগর চা' }, { x: SA[2] + 215, kind: 'furniture', name: 'ডিজাইন ফার্নিচার' },
+  { x: SA[3] + 30, kind: 'pharmacy', name: 'সেবা ফার্মেসি' }, { x: SA[4] + 30, kind: 'pharmacy', name: 'বিটুমিন ফার্মেসি' },
+  { x: SA[4] + 215, kind: 'biryani', name: 'মা বিরিয়ানি' }, { x: SA[6] + 30, kind: 'nagad', name: 'আল মুস্তাফা টেলিকম' }
 ];
 const KINDS = [
   ['nagad', 'tong', 'confection', 'garments', 'mobile', 'pharmacy', 'tong', 'confection', 'restaurant', 'default'],
@@ -835,7 +857,7 @@ function drawLandmarkFront(i) {
 }
 function drawPeds() {
   for (const p of S.peds) {
-    const cx = X(p.x + .3), y = SIDEY + 20 + clamp(p.lat, 0, 1.3) * (GY + 8 - SIDEY - 20);
+    const cx = X(p.x + .3), y = SIDEY + 20 + clamp(p.lat, 0, 1.3) * (GYP + 8 - SIDEY - 20);
     A.person(cx, p.hit ? y + 4 : y, 1.05, { shirt: p.shirt, pants: '#334155', skin: p.skin, ph: p.hit ? 0 : S.t * 7 + p.x, dir: S.dir, bag: p.bag, fall: p.hit, umb: S.rain ? p.umb : null });
     if (p.go && !p.hit && p.lat < .7) txt('!', cx, y - 92, 24, '#facc15', 'center', 700, '#000');
   }
@@ -843,12 +865,12 @@ function drawPeds() {
 function drawMob() {
   if (!S.mob) return;
   for (let k = 0; k < S.mob.n; k++) {
-    const mx = S.mob.x - (k % 4) * 1.1 - Math.floor(k / 4) * .6, cx = X(mx), y = GY + 8 + (k % 3) * 8 - 8;
+    const mx = S.mob.x - (k % 4) * 1.1 - Math.floor(k / 4) * .6, cx = X(mx), y = GYP + 8 + (k % 3) * 8 - 8;
     A.person(cx, y, 1.05, { shirt: ['#dc2626', '#2563eb', '#16a34a', '#f59e0b'][k % 4], pants: '#334155', skin: ['#c68a5a', '#a86f45', '#d8a276'][k % 3], ph: S.t * 12 + k * 1.3, run: !S.mob.caught, up: true, dir: S.dir });
   }
 }
 function drawOnc() {
-  for (const o of S.onc) drawVeh(o, { fx: -1, sc: .85, dy: -58 });
+  for (const o of S.onc) drawVeh(o, { fx: -1, sc: 1, dy: (Math.floor(o.seed) % 2) ? 36 : 10, fade: true });
 }
 
 function drawLandmark(i) {
@@ -894,7 +916,8 @@ function drawLandmark(i) {
       ctx.fillStyle = '#facc15'; ctx.fillRect(cx - 200, B - 12, 400, 12);
       ctx.fillStyle = '#111'; for (let k = 0; k < 10; k++) ctx.fillRect(cx - 200 + k * 40, B - 12, 20, 12);
       ctx.fillStyle = '#ea580c'; rr(cx - 110, B - 250, 220, 56, 10); ctx.fill(); txt('↩ ইউ-টার্ন', cx, B - 212, 32, '#fff', 'center', 700);
-      A.sheshTable(cx + 260, B);
+      A.sheshTable(cx + 360, B);
+      A.avenue(cx + (LTURN_AT + 14 - LM[5]) * PPM * S.dir, B, 'মসজিদ ও ইউআইইউ রোড', 'বামে টার্ন', -1);
       break; }
     case 6: A.mosque(cx, B); break;
     case 7: A.uiu(cx, B); break;
@@ -912,7 +935,7 @@ function drawGround() {
   // asphalt: worn, patched, cracked
   const rg = ctx.createLinearGradient(0, SIDEY + 27, 0, H); rg.addColorStop(0, '#5a5e67'); rg.addColorStop(.45, '#4b4e56'); rg.addColorStop(1, '#3e414a');
   ctx.fillStyle = rg; ctx.fillRect(0, SIDEY + 27, W, H - SIDEY - 27);
-  ctx.fillStyle = 'rgba(0,0,0,.09)'; ctx.fillRect(0, 436, W, 16); ctx.fillRect(0, 486, W, 16); // tyre-worn tracks
+  ctx.fillStyle = 'rgba(0,0,0,.09)'; ctx.fillRect(0, 430, W, 14); ctx.fillRect(0, 456, W, 14); ctx.fillRect(0, 492, W, 14); ctx.fillRect(0, 518, W, 14); // tyre-worn tracks, 2 lanes each way
   ctx.fillStyle = 'rgba(176,150,118,.20)'; ctx.fillRect(0, SIDEY + 27, W, 9); // sand & dust along the kerb
   for (let m = lo; m <= hi; m += 2) {
     const h = hash(m * .37);
@@ -920,24 +943,24 @@ function drawGround() {
     if (h > .3 && h < .46) { ctx.strokeStyle = 'rgba(15,15,18,.45)'; ctx.lineWidth = 1.2; ctx.beginPath(); const cx0 = X(m), cy0 = SIDEY + 60 + hash(m * 2) * 80; ctx.moveTo(cx0, cy0); ctx.lineTo(cx0 + 14, cy0 + 6); ctx.lineTo(cx0 + 22, cy0 + 2); ctx.lineTo(cx0 + 40, cy0 + 9); ctx.moveTo(cx0 + 14, cy0 + 6); ctx.lineTo(cx0 + 18, cy0 + 16); ctx.stroke(); }
   }
   for (let m = Math.floor((S.dist - 30) / 37); m <= Math.ceil((S.dist + 30) / 37); m++) { // manhole covers
-    if (hash(m * 5.9) < .5) continue; const cx = X(m * 37 + 11), cy = 468 + hash(m) * 26;
+    if (hash(m * 5.9) < .5) continue; const cx = X(m * 37 + 11), cy = 430 + hash(m) * 36 + (hash(m * 3) > .5 ? 72 : 0);
     ctx.fillStyle = '#2b2d33'; ctx.beginPath(); ctx.ellipse(cx, cy, 24, 7, 0, 0, 7); ctx.fill(); ctx.strokeStyle = '#6b6f78'; ctx.lineWidth = 1.2; ctx.stroke();
     ctx.strokeStyle = 'rgba(120,124,132,.7)'; ctx.beginPath(); for (let k = -2; k <= 2; k++) { ctx.moveTo(cx + k * 8 - 3, cy - 4); ctx.lineTo(cx + k * 8 + 3, cy + 4); } ctx.stroke();
   }
   // faded white lane dashes
-  for (let m = Math.floor(S.dist - 30); m <= S.dist + 30; m += 4) { if (hash(m * 1.7) > .86) continue; ctx.fillStyle = 'rgba(232,232,222,' + (.42 + hash(m) * .25) + ')'; ctx.fillRect(X(m), 452, 90, 4); }
-  // black-and-white striped concrete median on the right
-  ctx.fillStyle = '#a58c6c'; ctx.globalAlpha = .55; ctx.fillRect(0, 513, W, 9); ctx.globalAlpha = 1;
-  ctx.fillStyle = '#d9d6ce'; ctx.fillRect(0, 521, W, 11);
-  for (let m = lo; m <= hi; m++) { ctx.fillStyle = (Math.abs(m) % 2) ? '#1b1b1d' : '#f2f2ee'; ctx.fillRect(X(m), 532, 40, 8); }
-  ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.fillRect(0, 521, W, 2);
+  for (let m = Math.floor(S.dist - 30); m <= S.dist + 30; m += 4) { if (hash(m * 1.7) > .86) continue; ctx.fillStyle = 'rgba(232,232,222,' + (.42 + hash(m) * .25) + ')'; ctx.fillRect(X(m), 450, 90, 4); }
+  // dashed line between the two oncoming lanes, then the striped concrete median between the two carriageways
+  for (let m = Math.floor(S.dist - 30); m <= S.dist + 30; m += 4) { if (hash(m * 2.3) > .88) continue; ctx.fillStyle = 'rgba(232,232,222,.5)'; ctx.fillRect(X(m), 506, 90, 4); }
+  ctx.fillStyle = '#8e8a82'; ctx.fillRect(0, 472, W, 12); ctx.fillStyle = '#d9d6ce'; ctx.fillRect(0, 472, W, 6);
+  for (let m = lo; m <= hi; m++) { ctx.fillStyle = (Math.abs(m) % 2) ? '#1b1b1d' : '#f2f2ee'; ctx.fillRect(X(m), 478, 40, 6); }
+  ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.fillRect(0, 484, W, 2);
 }
 
 function drawRoadObjs() {
   for (const o of S.objs) {
     const x0 = X(o.x), x1 = X(o.x + o.w), cx = (x0 + x1) / 2, w = Math.abs(x1 - x0);
     if (cx < -300 || cx > W + 300) continue;
-    const y = GY + 12;
+    const y = GYP + 12;
     if (o.type === 'pothole') {
       ctx.fillStyle = '#2a2d35'; ctx.beginPath(); ctx.ellipse(cx, y, w / 2, 14, 0, 0, 7); ctx.fill();
       ctx.strokeStyle = '#7a7f8c'; ctx.lineWidth = 2; ctx.stroke();
@@ -964,7 +987,7 @@ function drawVeh(v, o) {
   ctx.save();
   const oo = o || {};
   ctx.translate(cx, GY - v.yoff * .3 + (oo.dy || 0)); ctx.scale(S.dir * (oo.fx || 1) * (oo.sc || 1), oo.sc || 1);
-  ctx.globalAlpha = 1 - v.yoff / 140;
+  ctx.globalAlpha = (1 - v.yoff / 140) * (oo.fade && Math.abs(cx - S.camX) < 150 ? .5 : 1);
   const hw = v.len * PPM / 2, wa = S.t * v.v * 2;
   ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(0, 2, hw, 7, 0, 0, 7); ctx.fill();
   if (v.type === 'car') {
@@ -1035,7 +1058,7 @@ function drawRickRear() {
   ctx.fillStyle = '#facc15'; ctx.fillRect(-40, -54, 80, 6); ctx.fillStyle = '#ef4444'; ctx.fillRect(-40, -48, 80, 3);
   ctx.fillStyle = '#f472b6'; for (let k = 0; k < 5; k++) { ctx.beginPath(); ctx.arc(Math.cos(k * 1.256) * 7, -70 + Math.sin(k * 1.256) * 7, 5, 0, 7); ctx.fill(); }
   ctx.fillStyle = '#fde047'; ctx.beginPath(); ctx.arc(0, -70, 4, 0, 7); ctx.fill();
-  ctx.fillStyle = '#fff'; rr(-19, -40, 38, 11, 3); ctx.fill(); txt('মামা-১২', 0, -31, 8, '#166534', 'center', 700);
+  ctx.fillStyle = '#fff'; rr(-19, -40, 38, 11, 3); ctx.fill(); txt('টেসলা', 0, -31, 8, '#166534', 'center', 700);
   ctx.fillStyle = '#ef4444'; ctx.fillRect(-38, -66, 6, 9); ctx.fillRect(32, -66, 6, 9);
   // driver (right) and passenger (left) seen from behind
   ctx.fillStyle = '#f1e4c8'; rr(6, -108, 22, 28, 6); ctx.fill(); ctx.fillStyle = '#d6a77a'; ctx.beginPath(); ctx.arc(17, -116, 9, 0, 7); ctx.fill(); ctx.fillStyle = '#e5e7eb'; ctx.beginPath(); ctx.arc(17, -120, 9, Math.PI, 0); ctx.fill();
@@ -1054,17 +1077,18 @@ function drawRickRear() {
 /* the player's auto */
 function drawAuto() {
   ctx.save();
-  const wy = S.wrong ? -Math.sin(Math.PI * S.wrong.t / S.wrong.dur) * 46 : 0;
-  ctx.translate(S.camX, GY + S.bobY + wy);
+  const wy = S.wrong ? Math.sin(Math.PI * S.wrong.t / S.wrong.dur) * 50 : 0;
+  const lp = S.lturn.state === 1 ? Math.sin(Math.PI * clamp(S.lturn.t / LTURN_DUR, 0, 1)) : 0;
+  ctx.translate(S.camX, GYP + S.bobY + wy - lp * 36); ctx.scale(PSC * (1 - .14 * lp), PSC * (1 - .14 * lp));
   ctx.rotate(S.tilt * S.face + (S.mode === 'dying' ? -.3 * clamp(S.deathT / .8, 0, 1) : 0));
   ctx.transform(1, 0, -clamp(S.a, -1, 1) * .07, 1, 0, 0); // faux-3D lean: the cab shears with the balance
-  const rear = S.uturn.state === 1 && S.turnSx < .45;
+  const rear = (S.uturn.state === 1 || S.lturn.state === 1) && S.turnSx < .45;
   ctx.scale(S.face * (rear ? 1 : S.turnSx), 1);
   const wa = S.wheel;
   ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(0, 4 - S.bobY, rear ? 56 : 90, 8, 0, 0, 7); ctx.fill();
   if (rear) { drawRickRear(); ctx.restore(); return; }
   const rick = true;
-  A.rickshaw(0, 0, 1.12, { col: '#16a34a', seed: 12, t: S.t, wa: wa, puller: true, cap: '#e5e7eb', lungi: '#2563eb', shirt: '#f1e4c8', plate: 'মামা-১২' });
+  A.rickshaw(0, 0, 1.12, { col: '#16a34a', seed: 12, t: S.t, wa: wa, puller: true, cap: '#e5e7eb', lungi: '#2563eb', shirt: '#f1e4c8', plate: 'ঢাকা-১২', name: 'টেসলা  TESLA' });
   if (!rick) {
   // seats
   ctx.fillStyle = '#7f1d1d'; ctx.fillRect(-70, -74, 70, 12); ctx.fillRect(-74, -112, 8, 40);
@@ -1128,7 +1152,7 @@ function drawAuto() {
   ctx.fillStyle = '#fde68a'; ctx.fillRect(78, -48, 6, 8);
   } else { ctx.strokeStyle = S.gripping ? '#fde047' : '#9ca3af'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(-40, -101); ctx.lineTo(0, -101); ctx.stroke(); }
   ctx.restore();
-  txt(S.name, S.camX - S.face * 38, GY - 178 + S.bobY, 14, '#fff', 'center', 700, 'rgba(0,0,0,.6)');
+  txt(S.name, S.camX - S.face * 38, GYP - 164 + S.bobY, 14, '#fff', 'center', 700, 'rgba(0,0,0,.6)');
 }
 
 function drawParts() {
@@ -1143,8 +1167,8 @@ function bubbleAnchor(b) {
     if (b.who === 'player') return { x: st.px, y: st.py - 104, c: '#3b82f6' };
     if (b.who === 'rick' && b.ref) return { x: b.ref.sx, y: b.ref.sy, c: '#16a34a' };
   }
-  if (b.who === 'driver') return { x: S.camX + S.face * 30, y: GY - 150 + S.bobY, c: '#f59e0b' };
-  if (b.who === 'player') return { x: S.camX - S.face * 38, y: GY - 196 + S.bobY, c: '#3b82f6' };
+  if (b.who === 'driver') return { x: S.camX + S.face * 30, y: GYP - 138 + S.bobY, c: '#f59e0b' };
+  if (b.who === 'player') return { x: S.camX - S.face * 38, y: GYP - 180 + S.bobY, c: '#3b82f6' };
   if (b.who === 'ped') return { x: b.ref ? X(b.ref.x) : W / 2, y: GY - 100, c: '#a855f7' };
   if (b.who === 'crowd') return { x: S.mob ? X(S.mob.x) : W / 2, y: GY - 110, c: '#b91c1c' };
   if (b.who === 'amb') return { x: b.ref ? X(b.ref.x) : W / 2, y: SIDEY - 40, c: '#0ea5e9' };
@@ -1193,15 +1217,15 @@ function drawHUD() {
   const x0 = 270, x1 = 690, y = 26;
   ctx.strokeStyle = 'rgba(0,0,0,.4)'; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke();
   ctx.strokeStyle = '#fde047'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke();
+  const CUM = [0]; GAPS.forEach(u => CUM.push(CUM[CUM.length - 1] + u));
   STAGES.forEach((s, i) => {
-    const x = x0 + (x1 - x0) * i / 7;
+    const x = x0 + (x1 - x0) * CUM[i] / 20;
     ctx.fillStyle = i <= S.stageIdx ? '#22c55e' : '#fff'; ctx.strokeStyle = '#111'; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.arc(x, y, 6, 0, 7); ctx.fill(); ctx.stroke();
     txt(s.short, x, y + 24, 11, '#fff', 'center', 700, 'rgba(0,0,0,.6)');
   });
-  const si = S.stageIdx, end = si === 7 ? FINISH : STAGES[si].at + SEG;
-  const frac = clamp((S.dist - STAGES[si].at) / (end - STAGES[si].at), 0, 1);
-  const px = x0 + (x1 - x0) * (si + frac) / 7;
+  let ru = 0; for (let i = 0; i < 7; i++) if (S.dist >= LM[i]) ru = CUM[i] + clamp((S.dist - LM[i]) / (LM[i + 1] - LM[i]), 0, 1) * GAPS[i];
+  const px = x0 + (x1 - x0) * clamp(ru, 0, 20) / 20;
   txt('🛺', px, y - 8, 20, '#fff', 'center');
   // balance gauge
   const gx = W / 2 - 110, gy = H - 30;
@@ -1239,7 +1263,7 @@ function drawScene() {
   for (let i = 0; i < 8; i++) drawLandmarkFront(i);
   drawRoadObjs();
   drawOnc();
-  S.vehs.forEach(v => drawVeh(v));
+  S.vehs.forEach(v => drawVeh(v, { sc: .95, dy: GYV - GY }));
   drawPeds();
   if (S.mode === 'win' || S.dist >= FINISH - 4) {
     const fx = X(FINISH);
@@ -1334,8 +1358,17 @@ function ambient(dt) {
 }
 
 let last = performance.now();
+let fAcc = 0, fN = 0, fCalm = 0;
+function adaptQuality(raw) {
+  if (S && S.mode !== 'play' && S.mode !== 'stand') return;
+  fAcc += raw; fN++;
+  if (fN < 45) return;
+  const avg = fAcc / fN; fAcc = 0; fN = 0;
+  if (avg > .024 && QUAL > .55) { QUAL = Math.max(.55, QUAL * .86); fCalm = 0; resize(); }
+  else if (avg < .0185) { fCalm++; if (fCalm >= 8 && QUAL < 1) { QUAL = Math.min(1, QUAL * 1.1); fCalm = 0; resize(); } } else fCalm = 0;
+}
 function frame(now) {
-  const dt = Math.min(.05, (now - last) / 1000); last = now;
+  const dt = Math.min(.05, (now - last) / 1000); adaptQuality((now - last) / 1000); last = now;
   if (document.body.classList.contains('needrot')) { /* waiting for the phone to be rotated */ }
   else if (S.mode === 'play') update(dt);
   else if (S.mode === 'stand') standTick(dt);
@@ -1492,7 +1525,7 @@ function drawStand() {
   const order = SLOTS.map((_, i) => i).sort((a, b) => SLOTS[a].y - SLOTS[b].y);
   for (const i of order) {
     const sl = SLOTS[i], d = FARE.drivers[i], lk = d.look;
-    A.rickshaw(sl.x, sl.y, sl.sc, { col: lk.col, seed: lk.seed, t: S.t, wa: 0, puller: true, skin: lk.skin, cap: lk.cap, mask: lk.mask, lungi: lk.lungi, shirt: lk.shirt, plate: i % 2 ? 'ব্যাটারি' : null, pass: st.boarded === i && (st.state === 'seated') });
+    A.rickshaw(sl.x, sl.y, sl.sc, { col: lk.col, seed: lk.seed, t: S.t, wa: 0, puller: true, skin: lk.skin, cap: lk.cap, mask: lk.mask, lungi: lk.lungi, shirt: lk.shirt, plate: i % 2 ? 'ব্যাটারি' : null, name: st.boarded === i ? 'টেসলা  TESLA' : ['মায়ের দোয়া', 'ঢাকা কিং', 'সোনার তরী', 'রাজকুমার', 'বাংলার মেয়ে', 'আল্লাহর রহমত', 'বাবুই'][(lk.seed | 0) % 7], pass: st.boarded === i && (st.state === 'seated') });
   }
   const sl = SLOTS[st.idx];
   if (st.state !== 'seated') {
