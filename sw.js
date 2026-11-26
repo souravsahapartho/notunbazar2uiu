@@ -1,3 +1,4 @@
+/*! Copyright (c) 2026 Vantyr. Licensed under the Vantyr License, Version 1.0. See LICENSE in the project root. */
 // Offline cache: voice clips are cached the first time they play; the app shell is network-first so updates always arrive.
 const V = 'tm-v1';
 self.addEventListener('install', () => self.skipWaiting());

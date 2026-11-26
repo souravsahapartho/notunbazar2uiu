@@ -1,3 +1,4 @@
+/*! Copyright (c) 2026 Vantyr. Licensed under the Vantyr License, Version 1.0. See LICENSE in the project root. */
 /* All dialogue lives here. Edit freely: each array is picked from at random.
    Original lines only (no ripped movie/drama audio or scripts). */
 window.LINES = {

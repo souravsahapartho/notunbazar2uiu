@@ -1,3 +1,4 @@
+/*! Copyright (c) 2026 Vantyr. Licensed under the Vantyr License, Version 1.0. See LICENSE in the project root. */
 /* Hand-drawn canvas sprites: Dhaka cycle rickshaws, people, hawker vans, shops, stands, flowers.
    All side-view, facing +x, origin = ground contact. No logos or external images. */
 window.ART = function (E) {

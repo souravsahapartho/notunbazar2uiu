@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (c) 2026 Vantyr. Licensed under the Vantyr License, Version 1.0. See LICENSE in the project root.
 """Create the game's voices on ElevenLabs from *text descriptions* (Voice Design) and write their ids into tools/voices.json.
 
   export ELEVENLABS_API_KEY=...

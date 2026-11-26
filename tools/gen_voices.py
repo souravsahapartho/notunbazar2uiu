@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (c) 2026 Vantyr. Licensed under the Vantyr License, Version 1.0. See LICENSE in the project root.
 """Build audio/*.mp3 + audio/manifest.json from every game line.
 
   export ELEVENLABS_API_KEY=...   (or AZURE_SPEECH_KEY=...)

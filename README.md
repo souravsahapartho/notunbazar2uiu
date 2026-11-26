@@ -59,7 +59,7 @@ vercel.json          security headers
 
 - The production bundle is minified and obfuscated, served with a strict Content-Security-Policy, no framing, HSTS and a locked-down Permissions-Policy. The debug hook only exists on localhost.
 - Anything that runs in a browser can be copied by someone determined. To keep the readable source private, set the GitHub repo to Private; Vercel can still deploy it.
-- Licence: all rights reserved (see `LICENSE`).
+- License: the Vantyr License, Version 1.0 (see `LICENSE`).
 
 ## If the game feels slow
 
@@ -69,4 +69,12 @@ The game tells you when the slowness is your internet and not the game. If your 
 
 It is a light-hearted parody. Shop names, notices and characters are made up. The landmark art is hand-drawn and approximate. Phones report tilt differently, so if the direction feels reversed, tick "↔ উল্টো" in the menu or open an issue.
 
-Made by Sourav Saha, UIU CSE, Dhaka.
+## License
+
+Copyright (c) 2026 Vantyr
+Licensed under the Vantyr License, Version 1.0.
+See [LICENSE](LICENSE) for the full terms, or read it at https://github.com/vantyrit/vantyr-license.
+
+You are free to use, modify and share this project, including commercially, as long as you keep the copyright notice and the license, mark any files you changed, and don't present a modified copy as the official release. The Vantyr name and logo are not covered by the license.
+
+Made by Sourav Saha, UIU CSE, Dhaka, as a Vantyr project.

@@ -1,3 +1,4 @@
+/*! Copyright (c) 2026 Vantyr. Licensed under the Vantyr License, Version 1.0. See LICENSE in the project root. */
 /* মামা, শক্ত করে সিট ধরে বসেন! — Natun Bazar → UIU
    Plain canvas game, no build step. */
 (() => {

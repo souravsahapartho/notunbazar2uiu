@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (c) 2026 Vantyr. Licensed under the Vantyr License, Version 1.0. See LICENSE in the project root.
 """Offline Bangla voice pack: no API key, no internet needed. Uses the eSpeak NG engine (pip install espeakng-loader)
 and ffmpeg to write audio/*.mp3 + audio/manifest.json for every game line, one clip per role/variant.
 

@@ -1,3 +1,4 @@
+/*! Copyright (c) 2026 Vantyr. Licensed under the Vantyr License, Version 1.0. See LICENSE in the project root. */
 /* Light anti-copy guard: refuses to run on unofficial hosts or inside someone else's frame.
    (A determined person can bypass any client-side check; the build step + private repo + licence do the rest.) */
 (function () {
