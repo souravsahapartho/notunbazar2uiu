@@ -1737,9 +1737,40 @@ $('ctrlNote').textContent = CTRL_NOTE[CTRL.mode]; applyCtrlClass();
 FARE.gender = store.get('tm_gender') === 'f' ? 'f' : 'm';
 Array.from($('genBtns').children).forEach(c => c.classList.toggle('on', c.dataset && c.dataset.g === FARE.gender));
 const best = store.get('tm_best'); $('bestNote').textContent = best ? 'সর্বোচ্চ স্কোর: ' + best : '';
+
+/* ---------- network watch: tell the player when the slowness is their internet, not the game ---------- */
+const NET = { bad: 0, good: 0, shown: false, lat: 0, timer: 0 };
+function netShow(on, msg) {
+  const el = $('netWarn'); if (!el) return;
+  if (on) el.textContent = msg;
+  el.classList.toggle('hidden', !on); NET.shown = on;
+}
+function netVerdict(ok, ms) {
+  const c = navigator.connection, slowType = c && /^(slow-2g|2g)$/.test(c.effectiveType || '');
+  if (!ok || ms > 2500 || slowType) { NET.bad++; NET.good = 0; } else { NET.good++; NET.bad = 0; }
+  if (!NET.shown && NET.bad >= 2) netShow(true, ok ? '📶 তোমার ইন্টারনেট খুব ধীর — গেমের দোষ নয়। কথা শুনতে দেরি হতে পারে।' : '📵 ইন্টারনেট অস্থির — গেমের দোষ নয়। নেট ঠিক হলে ভয়েস আবার আসবে।');
+  else if (NET.shown && NET.good >= 2) netShow(false);
+}
+function netProbe() {
+  if (document.hidden || typeof fetch !== 'function') return;
+  if (S && S.mode !== 'play' && S.mode !== 'stand') return;
+  if (navigator.onLine === false) { netVerdict(false, 99999); return; }
+  const t0 = performance.now(), ac = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const kill = setTimeout(() => ac && ac.abort(), 6000);
+  fetch('icon.svg?_=' + Date.now(), { cache: 'no-store', signal: ac ? ac.signal : undefined })
+    .then(r => { clearTimeout(kill); netVerdict(r.ok, performance.now() - t0); })
+    .catch(() => { clearTimeout(kill); netVerdict(false, 99999); });
+}
+window.addEventListener('offline', () => { NET.bad = 2; netVerdict(false, 99999); });
+window.addEventListener('online', () => { NET.good = 1; netProbe(); });
+NET.timer = setInterval(netProbe, 7000); if (NET.timer && NET.timer.unref) NET.timer.unref();
+// offline cache so a repeat visit loads fast and keeps the voices (not on localhost, so tests stay clean)
+if ('serviceWorker' in navigator && typeof location !== 'undefined' && !/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}
 requestAnimationFrame(frame);
 
 layout();
 // exposed for headless tests only
-if (typeof location === 'undefined' || /^(localhost|127\.0\.0\.1)$/.test(location.hostname)) window.__tm = { CTRL, onTilt, get S() { return S; }, update, render, startGame, beginRide, openFare, inp, FARE, BOARDINGS, newDriver, respond, finishDeal, resize, layout, updateWorld, hitPed, startWrong, AMB, NAMED, standTick, plead, onOffer, onNextAuto, onSkip, SLOTS };
+if (typeof location === 'undefined' || /^(localhost|127\.0\.0\.1)$/.test(location.hostname)) window.__tm = { NET, netVerdict, CTRL, onTilt, get S() { return S; }, update, render, startGame, beginRide, openFare, inp, FARE, BOARDINGS, newDriver, respond, finishDeal, resize, layout, updateWorld, hitPed, startWrong, AMB, NAMED, standTick, plead, onOffer, onNextAuto, onSkip, SLOTS };
 })();

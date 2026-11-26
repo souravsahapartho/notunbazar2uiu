@@ -7,7 +7,7 @@ const JSO = require('javascript-obfuscator');
 const root = path.join(__dirname, '..'), out = path.join(root, 'dist');
 fs.rmSync(out, { recursive: true, force: true }); fs.mkdirSync(path.join(out, 'js'), { recursive: true });
 const copy = (a, b) => fs.cpSync(path.join(root, a), path.join(out, b || a), { recursive: true });
-['index.html', 'style.css', 'manifest.webmanifest', 'icon.svg'].forEach(f => copy(f));
+['index.html', 'style.css', 'manifest.webmanifest', 'icon.svg', 'sw.js'].forEach(f => copy(f));
 if (fs.existsSync(path.join(root, 'audio'))) copy('audio');
 (async () => {
   // single bundle, load order matters: guard -> lines -> art -> game
