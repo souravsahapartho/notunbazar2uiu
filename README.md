@@ -1,6 +1,6 @@
 # 🛺 মামা, শক্ত করে সিট ধরে বসেন!
 
-A small browser game about the bumpy battery-rickshaw ride from Natun Bazar to UIU in Dhaka. You bargain the fare, hold the seat, and try not to fall off before the university gate.
+If you've ever taken a battery rickshaw from Natun Bazar to UIU, you already know the ride: haggling over the fare, potholes, buses squeezing past, and holding the seat for dear life. I turned that into a small browser game. You bargain with the driver, hold on, and try to reach the university gate without falling off.
 
 **Play:** https://notunbazar2uiu.vercel.app
 
@@ -60,6 +60,10 @@ vercel.json          security headers
 - The production bundle is minified and obfuscated, served with a strict Content-Security-Policy, no framing, HSTS and a locked-down Permissions-Policy. The debug hook only exists on localhost.
 - Anything that runs in a browser can be copied by someone determined. To keep the readable source private, set the GitHub repo to Private; Vercel can still deploy it.
 - Licence: all rights reserved (see `LICENSE`).
+
+## If the game feels slow
+
+The game tells you when the slowness is your internet and not the game. If your connection drops or gets very slow while you play, a small note appears at the top. The ride itself keeps running; only the voices need the network, and each clip is saved on your device after it plays once.
 
 ## Notes
 
